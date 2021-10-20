@@ -16,7 +16,7 @@ const compressString = function(s) { return s.replace(/[\n\r]+/g, '').replace(/[
 
 describe('Schemax', () => {
 	describe('.toString()', () => {
-		it('01 - Should compile a schemax object into a standard GraphQL schema string', () => {
+		it('01 - Should compile a schemax object into a standard GraphQL schema string.', () => {
 			const expected = compressString(`
 			enum Hello {
 				Jacky
@@ -120,7 +120,7 @@ describe('Schemax', () => {
 			// console.log(schema.toString())
 			assert.equal(compressString(schema.toString()), expected)
 		})	
-		it('02 - Should merge multiple schemax into a single valid GraphQL schema', () => {
+		it('02 - Should merge multiple schemax into a single valid GraphQL schema.', () => {
 			const expected = compressString(`
 			enum Hello {
 				Jacky
@@ -240,6 +240,52 @@ describe('Schemax', () => {
 			]
 
 			const schema = new Schemax(...randomSchemax, ...productSchemax, ...userSchemax)
+
+			// console.log(schema.toString())
+			assert.equal(compressString(schema.toString()), expected)
+		})
+		it('03 - Should support directives.', () => {
+			const expected = compressString(`
+			directive @deprecated(
+				reason: String = "No longer supported"
+			) on FIELD_DEFINITION | ENUM_VALUE
+
+			type Query @aws_cognito_user_pools {
+				users(where: WhereUserInput!): [User]
+			}
+
+			input WhereUserInput {
+				id: ID
+				first_name: String
+			}
+
+			type User {
+				id: ID @aws_auth
+				first_name: String
+				last_name: String
+				@aws_api_key @aws_cognito_user_pools(cognito_groups: ["Bloggers", "Readers"])
+				email: String
+			}
+
+			schema {
+				query: Query
+			}`)
+
+			const schema = new Schemax(
+				`directive @deprecated(
+					reason: String = "No longer supported"
+				) on FIELD_DEFINITION | ENUM_VALUE`, null,
+				'type Query @aws_cognito_user_pools', {
+					users: { where: { id:'ID', first_name:'String', __required:true, __name: 'WhereUserInput' }, ':': [{
+						id:'ID @aws_auth',
+						first_name:'String',
+						last_name:'String',
+						'@aws_api_key @aws_cognito_user_pools(cognito_groups: ["Bloggers", "Readers"])': null,
+						email:'String',
+						__name: 'User'
+					}] }
+				}
+			)
 
 			// console.log(schema.toString())
 			assert.equal(compressString(schema.toString()), expected)

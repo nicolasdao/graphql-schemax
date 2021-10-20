@@ -173,20 +173,21 @@ const _transpileSchema = items => {
 		dependencies = {}
 
 	const { mergedItems } = items.reduce((acc, item, i) => {
-		if (!item)
-			throw new Error(`Schema item[${i}] cannot be falsy.`)
 		const t = typeof(item)
 
 		if (acc.keyOn) {
+			if (!item)
+				throw new Error(`Schema item[${i}] cannot be falsy.`)
+
 			if (t != 'string')
 				throw new Error(`Schema item[${i}] must be a string (e.g., 'type Product'). Found '${t}' instead.`)
 			acc.key = item.trim()
 		} else {
-			if (t != 'object')
+			if (item && t != 'object')
 				throw new Error(`Schema item[${i}] must be an object (e.g., { id: 'ID!', name: 'String' }). Found '${t}' instead.`)
 			if (!acc.mergedItems[acc.key])
-				acc.mergedItems[acc.key] = item
-			else
+				acc.mergedItems[acc.key] = item || null
+			else if (item)
 				acc.mergedItems[acc.key] = { ...acc.mergedItems[acc.key], ...item }
 		}
 
@@ -198,9 +199,11 @@ const _transpileSchema = items => {
 	for (let [def,body] of Object.entries(mergedItems)) {
 		schema += newLine + def
 
-		const compiledItem = _compileBody(body)
-		schema += ' ' + compiledItem.body
-		dependencies = { ...dependencies, ...compiledItem.dependencies }
+		if (body) { // non-directive
+			const compiledItem = _compileBody(body)
+			schema += ' ' + compiledItem.body
+			dependencies = { ...dependencies, ...compiledItem.dependencies }
+		}
 
 		newLine = '\n\n'
 	}
