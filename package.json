@@ -8,7 +8,14 @@
   ],
   "main": "./dist/index.cjs",
   "exports": {
-    ".": "./src/index.mjs"
+    ".": [
+      {
+        "import": "./src/index.mjs",
+        "require": "./dist/index.cjs",
+        "default": "./dist/index.cjs"
+      },
+      "./dist/index.cjs"
+    ]
   },
   "repository": {
     "type": "git",
