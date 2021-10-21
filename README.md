@@ -4,7 +4,7 @@ Creates GraphQL string schema from plain JSON objects. Managing GraphQL schemas 
 - Composition: Reuse the same base object in inputs or types.
 - Separation of concerns: Isolate your domain in modules and merge them later. 
 - Inspection: Easily traverse the schema tree.
-- Leaner: Define GraphQL types, enums and inputs on-the-fly instead of having to define them explicitly. 
+- Leaner: Define GraphQL types, enums and inputs on-the-fly (_anonymous types_) instead of having to define them explicitly. 
 
 This package works with both ES6 modules and CommonJS and contains no dependencies.
 
@@ -429,12 +429,112 @@ schema {
 
 Notice how the directive must be followed by `null`.
 
-# Manipulating schemas
-## Merging schemas
+# APIs
+## `constructor`
+
+The `Schemax` class supports an undefined amount of arguments. It supports an inline schema definitions as well as arrays of inline schema definitions.
+
+__*Inline schema definitions*__
 
 ```js
+import { Schemax } from 'graphql-schemax'
 
+const schema = new Schemax(
+	'type Project', {
+		id: 'ID',
+		name: 'String'
+	},
+	'type User', {
+		id: 'ID',
+		first_name: 'String',
+		last_name: 'String'
+	},
+	'type Query', {
+		projects: '[Project]',
+		users: '[User]'
+	}
+)
+
+console.log(schema.toString())
 ```
+
+Which can also be written as follow:
+
+```js
+import { Schemax } from 'graphql-schemax'
+
+const inlineSchema = [
+'type Project', {
+	id: 'ID',
+	name: 'String'
+},
+'type User', {
+	id: 'ID',
+	first_name: 'String',
+	last_name: 'String'
+},
+'type Query', {
+	projects: '[Project]',
+	users: '[User]'
+}]
+
+const schema = new Schemax(...inlineSchema)
+
+console.log(schema.toString())
+```
+
+__*Array schema definitions*__
+
+```js
+import { Schemax } from 'graphql-schemax'
+
+const inlineSchema = [
+'type Project', {
+	id: 'ID',
+	name: 'String'
+},
+'type User', {
+	id: 'ID',
+	first_name: 'String',
+	last_name: 'String'
+},
+'type Query', {
+	projects: '[Project]',
+	users: '[User]'
+}]
+
+const schema = new Schemax(inlineSchema)
+
+console.log(schema.toString())
+```
+
+or 
+
+```js
+import { Schemax } from 'graphql-schemax'
+
+const inlineSchema = [
+'type Project', {
+	id: 'ID',
+	name: 'String'
+},
+'type User', {
+	id: 'ID',
+	first_name: 'String',
+	last_name: 'String'
+},
+'type Query', {
+	projects: '[Project]',
+	users: '[User]'
+}]
+
+const schema = new Schemax(inlineSchema)
+
+console.log(schema.toString())
+```
+
+# FAQ
+## How to merge schemas?
 
 # Dev
 ## About this project

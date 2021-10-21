@@ -1,14 +1,26 @@
 
 
 export function Schemax(...items) {
-	const _items = [...items]
+	const _items = items.reduce((acc,item) => {
+		if (Array.isArray(item) && item.some(x => typeof(x) != 'string'))
+			acc.push(...item)
+		else
+			acc.push(item)
+		return acc
+	},[])
 	
 	this.toString = () => {
 		return _transpileSchema(_items)
 	}
 
 	this.add = (...args) => {
-		_items.push(...args)
+		for (let i=0;i<args.length;i++) {
+			const item = args[i]
+			if (Array.isArray(item) && item.some(x => typeof(x) != 'string'))
+				_items.push(...item)
+			else
+				_items.push(item)
+		}
 	}
 
 	return this
