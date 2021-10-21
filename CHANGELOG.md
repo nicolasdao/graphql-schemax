@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.0.5](https://github.com/nicolasdao/graphql-schemax/compare/v0.0.4...v0.0.5) (2021-10-21)
+
+
+### Features
+
+* Add constructor support for array of inline schema definitions ([23976ce](https://github.com/nicolasdao/graphql-schemax/commit/23976ce9999d705131297c97988ff2bcefa8d041))
+
 ### [0.0.4](https://github.com/nicolasdao/graphql-schemax/compare/v0.0.3...v0.0.4) (2021-10-21)
 
 ### [0.0.3](https://github.com/nicolasdao/graphql-schemax/compare/v0.0.2...v0.0.3) (2021-10-20)
