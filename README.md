@@ -107,6 +107,7 @@ schema {
 >	- [Unit test](#unit-test)
 > * [FAQ](#faq)
 >	- [How to merge schemas?](#how-to-merge-schemas)
+>	- [What happens when the same type definitions exist in multiple schemas?](#what-happens-when-the-same-type-definitions-exist-in-multiple-schemas)
 > * [License](#license)
 
 # Getting started
@@ -615,7 +616,7 @@ schema {
 
 ## `add`
 
-Mutates the `Schemax` instance by adding more schemas definitions. It supports the same signature as the [`constructore`](#constructor).
+Mutates the `Schemax` instance by adding more schema definitions. It supports the same signature as the [`constructor`](#constructor).
 
 ```js
 import { Schemax } from 'graphql-schemax'
@@ -732,7 +733,7 @@ Both the [`constructor`](#constructor) and [`add`](#add) APIs support multiple s
 
 ## What happens when the same type definitions exist in multiple schemas?
 
-They are merged in a single type definition. This is how the `type Query`, `type Mutation` and `type Subscription` can be defined in multiple microservice schema and merged into a single GraphQL schema. For example:
+They are merged in a single type definition. This is how the `type Query`, `type Mutation` and `type Subscription` can be defined in multiple microservice schemas and merged into a single GraphQL schema. For example:
 
 ```js
 import { Schemax } from 'graphql-schemax'
