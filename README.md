@@ -97,6 +97,8 @@ schema {
 >	- [Required anonymous types](#required-anonymous-types)
 >	- [Naming anonymous types](#naming-anonymous-types)
 >	- [Directives](#directives)
+> * [Manipulating schemas](#manipulating-schemas)
+>	- [Merging schemas](#merging-schemas)
 > * [Dev](#dev)
 >	- [About this project](#about-this-project)
 >	- [Building this project for both CommonJS and ES6 modules](#building-this-project-for-both-commonjs-and-es6-modules)
@@ -192,7 +194,7 @@ Notice that:
 	- The last property must always be `':'`, which represents the output. This property is required.
 	- `first_name:'String'` is actually a shortcut for `first_name: { ':': 'String' }`.
 
-If you wich to be explicit about each types, the example above can be re-written as follow:
+If you wish to be explicit about each type, the example above can be re-written as follow:
 
 ```js
 const schema = new Schemax(
@@ -426,6 +428,13 @@ schema {
 ```
 
 Notice how the directive must be followed by `null`.
+
+# Manipulating schemas
+## Merging schemas
+
+```js
+
+```
 
 # Dev
 ## About this project
