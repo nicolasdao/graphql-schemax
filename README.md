@@ -97,12 +97,16 @@ schema {
 >	- [Required anonymous types](#required-anonymous-types)
 >	- [Naming anonymous types](#naming-anonymous-types)
 >	- [Directives](#directives)
-> * [Manipulating schemas](#manipulating-schemas)
->	- [Merging schemas](#merging-schemas)
+> * [APIs](#apis)
+>	- [`constructor`](#constructor)
+>	- [`toString`](#tostring)
+>	- [`add`](#add)
 > * [Dev](#dev)
 >	- [About this project](#about-this-project)
 >	- [Building this project for both CommonJS and ES6 modules](#building-this-project-for-both-commonjs-and-es6-modules)
 >	- [Unit test](#unit-test)
+> * [FAQ](#faq)
+>	- [How to merge schemas?](#how-to-merge-schemas)
 > * [License](#license)
 
 # Getting started
@@ -513,28 +517,192 @@ or
 ```js
 import { Schemax } from 'graphql-schemax'
 
-const inlineSchema = [
+const inlineSchema01 = [
 'type Project', {
 	id: 'ID',
 	name: 'String'
 },
+'type Query', {
+	projects: '[Project]'
+}]
+
+const inlineSchema02 = [
 'type User', {
 	id: 'ID',
 	first_name: 'String',
 	last_name: 'String'
 },
 'type Query', {
-	projects: '[Project]',
 	users: '[User]'
 }]
 
-const schema = new Schemax(inlineSchema)
+const schema = new Schemax(inlineSchema01, inlineSchema02)
 
 console.log(schema.toString())
 ```
 
-# FAQ
-## How to merge schemas?
+> __NOTICE:__ The `type Query` is defined twice. When Schemax detects multiple identical definitions, it merges them. This means that in this example, the output is equal to:
+> ```js
+> type Query {
+> 	projects: [Project]
+> 	users: [User]
+> }
+> ```
+
+Finally, the constructor also support mixing those two styles:
+
+```js
+const schema = new Schemax(inlineSchema01, 
+'type User', {
+	id: 'ID',
+	first_name: 'String',
+	last_name: 'String'
+},
+'type Query', {
+	users: '[User]'
+})
+```
+
+## `toString`
+
+Compiles the `Schemax` instance to a GraphQL string. 
+
+```js
+import { Schemax } from 'graphql-schemax'
+
+const schema = new Schemax(
+	'type Project', {
+		id: 'ID',
+		name: 'String'
+	},
+	'type User', {
+		id: 'ID',
+		first_name: 'String',
+		last_name: 'String'
+	},
+	'type Query', {
+		projects: '[Project]',
+		users: '[User]'
+	}
+)
+
+console.log(schema.toString())
+```
+
+Which outputs:
+
+```js
+type Project {
+	id: ID
+	name: String
+}
+
+type User {
+	id: ID
+	first_name: String
+	last_name: String
+}
+
+type Query {
+	projects: [Project]
+	users: [User]
+}
+
+schema {
+	query: Query
+}
+```
+
+## `add`
+
+Mutates the `Schemax` instance by adding more schemas definitions. It supports the same signature as the [`constructore`](#constructor).
+
+```js
+import { Schemax } from 'graphql-schemax'
+
+const inlineSchema01 = [
+'type Project', {
+	id: 'ID',
+	name: 'String'
+},
+'type Query', {
+	projects: '[Project]'
+}]
+
+const inlineSchema02 = [
+'type User', {
+	id: 'ID',
+	first_name: 'String',
+	last_name: 'String'
+},
+'type Query', {
+	users: '[User]'
+}]
+
+const schema = new Schemax()
+
+console.log('SAMPLE 01')
+console.log(schema.toString())
+
+schema.add(inlineSchema01)
+
+console.log('SAMPLE 02')
+console.log(schema.toString())
+
+schema.add(inlineSchema02, 
+'type Address', {
+	id: 'ID',
+	line01: 'String'
+})
+
+console.log('SAMPLE 03')
+console.log(schema.toString())
+```
+
+Which outputs:
+
+```js
+// SAMPLE 01
+
+// SAMPLE 02
+type Project {
+	id: ID
+	name: String
+}
+
+type Query {
+	projects: [Project]
+}
+
+schema {
+	query: Query
+}
+// SAMPLE 03
+type Project {
+	id: ID
+	name: String
+}
+
+type Query {
+	projects: [Project]
+	users: [User]
+}
+
+type User {
+	id: ID
+	first_name: String
+	last_name: String
+}
+
+type Address {
+	id: ID
+	line01: String
+}
+
+schema {
+	query: Query
+}
+```
 
 # Dev
 ## About this project
@@ -556,6 +724,72 @@ This command compiles the ES6 modules located under the `src` folder to `.cjs` f
 ```
 npm test
 ```
+
+# FAQ
+## How to merge schemas?
+
+Both the [`constructor`](#constructor) and [`add`](#add) APIs support multiple schema definitions. Those schema definitions are merged when the [`toString`](#tostring) API is executed.
+
+## What happens when the same type definitions exist in multiple schemas?
+
+They are merged in a single type definition. This is how the `type Query`, `type Mutation` and `type Subscription` can be defined in multiple microservice schema and merged into a single GraphQL schema. For example:
+
+```js
+import { Schemax } from 'graphql-schemax'
+
+const inlineSchema01 = [
+'type Project', {
+	id: 'ID',
+	name: 'String'
+},
+'type Query', {
+	projects: '[Project]'
+}]
+
+const inlineSchema02 = [
+'type User', {
+	id: 'ID',
+	first_name: 'String',
+	last_name: 'String'
+},
+'type Project', {
+	sku: 'String'
+},
+'type Query', {
+	users: '[User]'
+}]
+
+const schema = new Schemax(inlineSchema01, inlineSchema02)
+
+console.log(schema.toString())
+```
+
+Outputs:
+
+```js
+type Project {
+	id: ID
+	name: String
+	sku: String
+}
+
+type Query {
+	projects: [Project]
+	users: [User]
+}
+
+type User {
+	id: ID
+	first_name: String
+	last_name: String
+}
+
+schema {
+	query: Query
+}
+```
+
+Notice that both `type Project` and `type Query` are defined twice. They are both merged in the final GraphQL schema.
 
 # License
 
