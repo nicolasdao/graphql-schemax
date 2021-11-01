@@ -518,6 +518,527 @@ describe('Schemax', () => {
 			// console.log(schema.toString())
 			assert.equal(compressString(schema.toString()), expected)
 		})	
+		it('06 - Should support merging same types by keeping the longest when merging multiple schemax into a single valid GraphQL schema.', () => {
+			const expected = compressString(`
+			enum Hello {
+				Jacky
+				Peter
+			}
+
+			type Project @aws_cognito_user_pools {
+				id: ID!
+				name: String!
+				description: String
+				create_date: String!
+				update_date: String @aws_api_key
+				delete_date: String
+				last_commit_date: String
+				@aws_api_key
+			}
+
+			type Query {
+				projects(where: Input_11955503210, order: Input_12144573852): Type_1850756101
+				@aws_api_key @aws_cognito_user_pools(cognito_groups: ["Bloggers", "Readers"])
+				users(where: Input_11955503210): [User]
+			}
+
+			type User {
+				id: ID!
+				name: String!
+				description: String
+				first_name: String
+				last_name: String
+			}
+
+			type Mutation @aws_cognito_user_pools {
+				createProject(project: Input_1743483650): Project
+				createUser(user: Input_1743483650): User
+			}
+
+			input Input_11955503210 {
+				id: ID
+				name: String
+			}
+
+			enum Enum_11091652180 {
+				create_date
+				name
+			}
+
+			enum Enum_1894885946 {
+				asc
+				desc
+			}
+
+			input Input_12144573852 {
+				by: Enum_11091652180
+				dir: Enum_1894885946
+			}
+
+			type Type_1850756101 {
+				count: Int
+				data: [Project]
+				cursor: ID
+			}
+
+			input Input_1743483650 {
+				name: String!
+				description: String
+			}
+
+			schema {
+				query: Query
+				mutation: Mutation
+			}`)
+
+			const baseResource = {
+				id: 'ID!',
+				name: 'String!',
+				description: 'String'
+			}
+
+			const randomSchemax = [
+				'enum Hello', ['Peter', 'Jacky']
+			]
+
+			const productSchemax = [
+				'type Project @aws_cognito_user_pools', {
+					...baseResource,
+					create_date: 'String!',
+					update_date: 'String @aws_api_key',
+					delete_date: 'String',
+					last_commit_date: 'String',
+					'@aws_api_key': null
+				},
+				'type Query', {
+					projects: { where: { id: 'ID', name: 'String' }, order: { by: ['create_date', 'name'], dir: ['asc', 'desc'] }, ':': {
+						count: 'Int',
+						data: '[Project]',
+						cursor: 'ID'
+					}},
+					'@aws_api_key @aws_cognito_user_pools(cognito_groups: ["Bloggers", "Readers"])': null,
+				},
+				'type Mutation @aws_cognito_user_pools', {
+					createProject: { project: { name:'String!', description:'String' }, ':': 'Project' },
+				}
+			]
+
+			const userSchemax = [
+				'type User', {
+					...baseResource,
+					first_name: 'String',
+					last_name: 'String'
+				},
+				'type Query', {
+					users: { where: { id: 'ID', name: 'String' }, ':': '[User]' }
+				},
+				'type Mutation', {
+					createUser: { user: { name:'String!', description:'String' }, ':': 'User' }
+				}
+			]
+
+			const schema = new Schemax(...randomSchemax, ...productSchemax, ...userSchemax)
+			schema.addTypeResolutions([
+				{ def: /^type Mutation(\s|$)/, keepLongest:true }
+			])
+
+			// console.log(schema.toString())
+			assert.equal(compressString(schema.toString()), expected)
+		})
+		it('07 - Should support renaming types when merging multiple schemax into a single valid GraphQL schema.', () => {
+			const expected = compressString(`
+			enum Hello {
+				Jacky
+				Peter
+			}
+
+			type Project @aws_cognito_user_pools {
+				id: ID!
+				name: String!
+				description: String
+				create_date: String!
+				update_date: String @aws_api_key
+				delete_date: String
+				last_commit_date: String
+				@aws_api_key
+			}
+
+			type Query {
+				projects(where: Input_11955503210, order: Input_12144573852): Type_1850756101
+				@aws_api_key @aws_cognito_user_pools(cognito_groups: ["Bloggers", "Readers"])
+				users(where: Input_11955503210): [User]
+			}
+
+			type User @aws_auth {
+				id: ID!
+				name: String!
+				description: String
+				first_name: String
+				last_name: String
+			}
+
+			type Mutation @aws_cognito_user_pools {
+				createProject(project: Input_1743483650): Project
+				createUser(user: Input_1743483650): User
+			}
+
+			input Input_11955503210 {
+				id: ID
+				name: String
+			}
+
+			enum Enum_11091652180 {
+				create_date
+				name
+			}
+
+			enum Enum_1894885946 {
+				asc
+				desc
+			}
+
+			input Input_12144573852 {
+				by: Enum_11091652180
+				dir: Enum_1894885946
+			}
+
+			type Type_1850756101 {
+				count: Int
+				data: [Project]
+				cursor: ID
+			}
+
+			input Input_1743483650 {
+				name: String!
+				description: String
+			}
+
+			schema {
+				query: Query
+				mutation: Mutation
+			}`)
+
+			const baseResource = {
+				id: 'ID!',
+				name: 'String!',
+				description: 'String'
+			}
+
+			const randomSchemax = [
+				'enum Hello', ['Peter', 'Jacky']
+			]
+
+			const productSchemax = [
+				'type Project @aws_cognito_user_pools', {
+					...baseResource,
+					create_date: 'String!',
+					update_date: 'String @aws_api_key',
+					delete_date: 'String',
+					last_commit_date: 'String',
+					'@aws_api_key': null
+				},
+				'type Query', {
+					projects: { where: { id: 'ID', name: 'String' }, order: { by: ['create_date', 'name'], dir: ['asc', 'desc'] }, ':': {
+						count: 'Int',
+						data: '[Project]',
+						cursor: 'ID'
+					}},
+					'@aws_api_key @aws_cognito_user_pools(cognito_groups: ["Bloggers", "Readers"])': null,
+				},
+				'type Mutation @aws_cognito_user_pools', {
+					createProject: { project: { name:'String!', description:'String' }, ':': 'Project' },
+				}
+			]
+
+			const userSchemax = [
+				'type User', {
+					...baseResource,
+					first_name: 'String',
+					last_name: 'String'
+				},
+				'type Query', {
+					users: { where: { id: 'ID', name: 'String' }, ':': '[User]' }
+				},
+				'type Mutation', {
+					createUser: { user: { name:'String!', description:'String' }, ':': 'User' }
+				}
+			]
+
+			const schema = new Schemax(...randomSchemax, ...productSchemax, ...userSchemax)
+			schema.addTypeResolutions([
+				{ def: 'type User', to: 'type User @aws_auth' },
+				{ def: /^type Mutation(\s|$)/, keepLongest:true }
+			])
+
+			// console.log(schema.toString())
+			assert.equal(compressString(schema.toString()), expected)
+		})
+		it('08 - Should support merging same types by keeping the shortest when merging multiple schemax into a single valid GraphQL schema.', () => {
+			const expected = compressString(`
+			enum Hello {
+				Jacky
+				Peter
+			}
+
+			type Project @aws_cognito_user_pools {
+				id: ID!
+				name: String!
+				description: String
+				create_date: String!
+				update_date: String @aws_api_key
+				delete_date: String
+				last_commit_date: String
+				@aws_api_key
+			}
+
+			type Query {
+				projects(where: Input_11955503210, order: Input_12144573852): Type_1850756101
+				@aws_api_key @aws_cognito_user_pools(cognito_groups: ["Bloggers", "Readers"])
+				users(where: Input_11955503210): [User]
+			}
+
+			type User {
+				id: ID!
+				name: String!
+				description: String
+				first_name: String
+				last_name: String
+			}
+
+			type Mutation {
+				createProject(project: Input_1743483650): Project
+				createUser(user: Input_1743483650): User
+			}
+
+			input Input_11955503210 {
+				id: ID
+				name: String
+			}
+
+			enum Enum_11091652180 {
+				create_date
+				name
+			}
+
+			enum Enum_1894885946 {
+				asc
+				desc
+			}
+
+			input Input_12144573852 {
+				by: Enum_11091652180
+				dir: Enum_1894885946
+			}
+
+			type Type_1850756101 {
+				count: Int
+				data: [Project]
+				cursor: ID
+			}
+
+			input Input_1743483650 {
+				name: String!
+				description: String
+			}
+
+			schema {
+				query: Query
+				mutation: Mutation
+			}`)
+
+			const baseResource = {
+				id: 'ID!',
+				name: 'String!',
+				description: 'String'
+			}
+
+			const randomSchemax = [
+				'enum Hello', ['Peter', 'Jacky']
+			]
+
+			const productSchemax = [
+				'type Project @aws_cognito_user_pools', {
+					...baseResource,
+					create_date: 'String!',
+					update_date: 'String @aws_api_key',
+					delete_date: 'String',
+					last_commit_date: 'String',
+					'@aws_api_key': null
+				},
+				'type Query', {
+					projects: { where: { id: 'ID', name: 'String' }, order: { by: ['create_date', 'name'], dir: ['asc', 'desc'] }, ':': {
+						count: 'Int',
+						data: '[Project]',
+						cursor: 'ID'
+					}},
+					'@aws_api_key @aws_cognito_user_pools(cognito_groups: ["Bloggers", "Readers"])': null,
+				},
+				'type Mutation @aws_cognito_user_pools', {
+					createProject: { project: { name:'String!', description:'String' }, ':': 'Project' },
+				}
+			]
+
+			const userSchemax = [
+				'type User', {
+					...baseResource,
+					first_name: 'String',
+					last_name: 'String'
+				},
+				'type Query', {
+					users: { where: { id: 'ID', name: 'String' }, ':': '[User]' }
+				},
+				'type Mutation', {
+					createUser: { user: { name:'String!', description:'String' }, ':': 'User' }
+				}
+			]
+
+			const schema = new Schemax(...randomSchemax, ...productSchemax, ...userSchemax)
+			schema.addTypeResolutions([
+				{ def: /^type Mutation(\s|$)/, keepShortest:true }
+			])
+
+			// console.log(schema.toString())
+			assert.equal(compressString(schema.toString()), expected)
+		})
+		it('09 - Should support merging same types with a custom reducer when merging multiple schemax into a single valid GraphQL schema.', () => {
+			const expected = compressString(`
+			enum Hello {
+				Jacky
+				Peter
+			}
+
+			type Project @aws_cognito_user_pools {
+				id: ID!
+				name: String!
+				description: String
+				create_date: String!
+				update_date: String @aws_api_key
+				delete_date: String
+				last_commit_date: String
+				@aws_api_key
+			}
+
+			type Query {
+				projects(where: Input_11955503210, order: Input_12144573852): Type_1850756101
+				@aws_api_key @aws_cognito_user_pools(cognito_groups: ["Bloggers", "Readers"])
+				users(where: Input_11955503210): [User]
+			}
+
+			type User {
+				id: ID!
+				name: String!
+				description: String
+				first_name: String
+				last_name: String
+			}
+
+			type Mutation @aws_cognito_user_pools @aws_auth {
+				createProject(project: Input_1743483650): Project
+				createUser(user: Input_1743483650): User
+			}
+
+			input Input_11955503210 {
+				id: ID
+				name: String
+			}
+
+			enum Enum_11091652180 {
+				create_date
+				name
+			}
+
+			enum Enum_1894885946 {
+				asc
+				desc
+			}
+
+			input Input_12144573852 {
+				by: Enum_11091652180
+				dir: Enum_1894885946
+			}
+
+			type Type_1850756101 {
+				count: Int
+				data: [Project]
+				cursor: ID
+			}
+
+			input Input_1743483650 {
+				name: String!
+				description: String
+			}
+
+			schema {
+				query: Query
+				mutation: Mutation
+			}`)
+
+			const baseResource = {
+				id: 'ID!',
+				name: 'String!',
+				description: 'String'
+			}
+
+			const randomSchemax = [
+				'enum Hello', ['Peter', 'Jacky']
+			]
+
+			const productSchemax = [
+				'type Project @aws_cognito_user_pools', {
+					...baseResource,
+					create_date: 'String!',
+					update_date: 'String @aws_api_key',
+					delete_date: 'String',
+					last_commit_date: 'String',
+					'@aws_api_key': null
+				},
+				'type Query', {
+					projects: { where: { id: 'ID', name: 'String' }, order: { by: ['create_date', 'name'], dir: ['asc', 'desc'] }, ':': {
+						count: 'Int',
+						data: '[Project]',
+						cursor: 'ID'
+					}},
+					'@aws_api_key @aws_cognito_user_pools(cognito_groups: ["Bloggers", "Readers"])': null,
+				},
+				'type Mutation @aws_cognito_user_pools', {
+					createProject: { project: { name:'String!', description:'String' }, ':': 'Project' },
+				}
+			]
+
+			const userSchemax = [
+				'type User', {
+					...baseResource,
+					first_name: 'String',
+					last_name: 'String'
+				},
+				'type Query', {
+					users: { where: { id: 'ID', name: 'String' }, ':': '[User]' }
+				},
+				'type Mutation @aws_auth', {
+					createUser: { user: { name:'String!', description:'String' }, ':': 'User' }
+				}
+			]
+
+			const schema = new Schemax(...randomSchemax, ...productSchemax, ...userSchemax)
+			schema.addTypeResolutions([
+				{ 
+					def: /^type Mutation(\s|$)/, 
+					reduce:(oldType, newType, context) => {
+						const attributes = newType.replace('type Mutation', '').split(' ').filter(x => x)
+						if (!context.attributes)
+							context.attributes = new Set(attributes)
+						else
+							attributes.forEach(a => context.attributes.add(a))
+
+						const attrs = Array.from(context.attributes)
+						return attrs.length ? `type Mutation ${attrs.join(' ')}` : 'type Mutation'
+					}
+				}
+			])
+
+			// console.log(schema.toString())
+			assert.equal(compressString(schema.toString()), expected)
+		})
 	})
 	describe('.add()', () => {
 		it('01 - Should merge multiple schemax into a single valid GraphQL schema.', () => {

@@ -101,6 +101,12 @@ schema {
 >	- [`constructor`](#constructor)
 >	- [`toString`](#tostring)
 >	- [`add`](#add)
+>	- [`addTypeResolutions`](#addtyperesolutions)
+>		- [Renaming a type](#renaming-a-type)
+>		- [Merging types](#merging-types)
+>			- [Keeping the longest type](#keeping-the-longest-type)
+>			- [Keeping the shortest type](#keeping-the-shortest-type)
+>			- [Custom merge](#custom-merge)
 > * [Dev](#dev)
 >	- [About this project](#about-this-project)
 >	- [Building this project for both CommonJS and ES6 modules](#building-this-project-for-both-commonjs-and-es6-modules)
@@ -705,6 +711,221 @@ schema {
 }
 ```
 
+## `addTypeResolutions`
+
+Helps renaming or merging types by explicitly controlling how type names are resolved.
+
+### Renaming a type
+
+```js
+import { Schemax } from 'graphql-schemax'
+
+const inlineSchema01 = [
+'type Project', {
+	id: 'ID',
+	name: 'String'
+},
+'type Query', {
+	projects: '[Project]'
+}]
+
+const inlineSchema02 = [
+'type User', {
+	id: 'ID',
+	first_name: 'String',
+	last_name: 'String'
+},
+'type Query', {
+	users: '[User]'
+}]
+
+const schema = new Schemax(...inlineSchema01, ...inlineSchema02)
+schema.addTypeResolutions([{
+	def: 'type User', to: 'type User @aws_api_key'
+}])
+
+console.log(schema.toString())
+```
+
+### Merging types
+#### Keeping the longest type
+
+```js
+import { Schemax } from 'graphql-schemax'
+
+const inlineSchema01 = [
+'type Project', {
+	id: 'ID',
+	name: 'String'
+},
+'type Query', {
+	projects: '[Project]'
+}]
+
+const inlineSchema02 = [
+'type User', {
+	id: 'ID',
+	first_name: 'String',
+	last_name: 'String'
+},
+'type Query @aws_api_key', {
+	users: '[User]'
+}]
+
+const schema = new Schemax(...inlineSchema01, ...inlineSchema02)
+schema.addTypeResolutions([{
+	def: /^type Query(\s|$)/, keepLongest:true
+}])
+
+console.log(schema.toString())
+```
+
+Which returns:
+
+```js
+type Project {
+	id: ID
+	name: String
+}
+
+type User {
+	id: ID
+	first_name: String
+	last_name: String
+}
+
+type Query @aws_api_key {
+	projects: [Project]
+	users: [User]
+}
+
+schema {
+	query: Query
+}
+```
+
+#### Keeping the shortest type
+
+```js
+import { Schemax } from 'graphql-schemax'
+
+const inlineSchema01 = [
+'type Project', {
+	id: 'ID',
+	name: 'String'
+},
+'type Query', {
+	projects: '[Project]'
+}]
+
+const inlineSchema02 = [
+'type User', {
+	id: 'ID',
+	first_name: 'String',
+	last_name: 'String'
+},
+'type Query @aws_api_key', {
+	users: '[User]'
+}]
+
+const schema = new Schemax(...inlineSchema01, ...inlineSchema02)
+schema.addTypeResolutions([{
+	def: /^type Query(\s|$)/, keepShortest:true
+}])
+
+console.log(schema.toString())
+```
+
+Which returns:
+
+```js
+type Project {
+	id: ID
+	name: String
+}
+
+type User {
+	id: ID
+	first_name: String
+	last_name: String
+}
+
+type Query {
+	projects: [Project]
+	users: [User]
+}
+
+schema {
+	query: Query
+}
+```
+
+#### Custom merge
+
+```js
+import { Schemax } from 'graphql-schemax'
+
+const inlineSchema01 = [
+'type Project', {
+	id: 'ID',
+	name: 'String'
+},
+'type Query @aws_cognito_user_pools', {
+	projects: '[Project]'
+}]
+
+const inlineSchema02 = [
+'type User', {
+	id: 'ID',
+	first_name: 'String',
+	last_name: 'String'
+},
+'type Query @aws_api_key', {
+	users: '[User]'
+}]
+
+const schema = new Schemax(...inlineSchema01, ...inlineSchema02)
+schema.addTypeResolutions([{
+	def: /^type Query(\s|$)/, 
+	reduce:(oldType, newType, context) => { // fired for each type that matches the regex /^type Query(\s|$)/
+		const attributes = newType.replace('type Query', '').split(' ').filter(x => x)
+		if (!context.attributes)
+			context.attributes = new Set(attributes)
+		else
+			attributes.forEach(a => context.attributes.add(a))
+
+		const attrs = Array.from(context.attributes)
+		return attrs.length ? `type Query ${attrs.join(' ')}` : 'type Query'
+	}
+}])
+
+console.log(schema.toString())
+```
+
+Which returns:
+
+```js
+type Project {
+	id: ID
+	name: String
+}
+
+type User {
+	id: ID
+	first_name: String
+	last_name: String
+}
+
+type Query @aws_cognito_user_pools @aws_api_key {
+	projects: [Project]
+	users: [User]
+}
+
+schema {
+	query: Query
+}
+```
+
 # Dev
 ## About this project
 
@@ -733,7 +954,7 @@ Both the [`constructor`](#constructor) and [`add`](#add) APIs support multiple s
 
 ## What happens when the same type definitions exist in multiple schemas?
 
-They are merged in a single type definition. This is how the `type Query`, `type Mutation` and `type Subscription` can be defined in multiple microservice schemas and merged into a single GraphQL schema. For example:
+They are merged into a single type definition. This is how the `type Query`, `type Mutation` and `type Subscription` can be defined in multiple microservice schemas and merged into a single GraphQL schema. For example:
 
 ```js
 import { Schemax } from 'graphql-schemax'
@@ -791,6 +1012,8 @@ schema {
 ```
 
 Notice that both `type Project` and `type Query` are defined twice. They are both merged in the final GraphQL schema.
+
+> __WARNING:__ If the type definitions are not exactly identical, the type are considered different and won't be merged. This means that identical types with different directive won't be merged automatically. To deal with this advanced scenario, use the [`addTypeResolutions`](#addtyperesolutions) API.
 
 # License
 

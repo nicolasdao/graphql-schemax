@@ -1,6 +1,7 @@
 
 
 export function Schemax(...items) {
+	const _typeResolutions = []
 	const _items = items.reduce((acc,item) => {
 		if (Array.isArray(item) && item.some(x => typeof(x) != 'string'))
 			acc.push(...item)
@@ -10,7 +11,7 @@ export function Schemax(...items) {
 	},[])
 	
 	this.toString = () => {
-		return _transpileSchema(_items)
+		return _transpileSchema(_items, _typeResolutions)
 	}
 
 	this.add = (...args) => {
@@ -22,6 +23,8 @@ export function Schemax(...items) {
 				_items.push(item)
 		}
 	}
+
+	this.addTypeResolutions = values => _typeResolutions.push(...(values||[]))
 
 	return this
 }
@@ -38,7 +41,7 @@ export function Schemax(...items) {
  * @return {Boolean}	.isArray			
  * @return {String}		.body				e.g., '{ id: ID! name: String @aws_api_key }'
  */
-const _compileBody = (body, indent) => {
+const _compileBody = (body, indent='') => {
 	if (!body)
 		throw new Error('\'body\' is required.')
 	if (typeof(body) != 'object')
@@ -173,18 +176,30 @@ const _compileBody = (body, indent) => {
 /**
  * Transpiles a JSON object to a GraphQL string schema.
  * 
- * @param  {[Object]} items
+ * @param  {[Object]}		items
+ * @param  {[Object]}		typeResolutions[]
+ * @param  {String|RegExp}		.def
+ * @param  {Boolean}			.keepLongest
+ * @param  {Boolean}			.keepShortest
  * 
  * @return {String}   graphQLSchema
  */
-const _transpileSchema = items => {
+const _transpileSchema = (items, typeResolutions) => {
 	if (!items.length)
 		return ''
+
+	const typeResolutionsOn = typeResolutions && typeResolutions.length
+	const matchTypeResolutions = typeResolutionsOn 
+		? typeResolutions.filter(r => r && r.def).map((r,idx) => {
+			const match = typeof(r.def) == 'string' ? v => v == r.def : r.def instanceof RegExp ? v => (v||'').match(r.def) : () => false
+			return { ...r, match, id:idx }
+		})
+		: null
 
 	let schema = '',
 		dependencies = {}
 
-	const { mergedItems } = items.reduce((acc, item, i) => {
+	const { mergedItems, matchedKeyResolutionRules } = items.reduce((acc, item, i) => {
 		const t = typeof(item)
 
 		if (acc.keyOn) {
@@ -194,6 +209,15 @@ const _transpileSchema = items => {
 			if (t != 'string')
 				throw new Error(`Schema item[${i}] must be a string (e.g., 'type Product'). Found '${t}' instead.`)
 			acc.key = item.trim()
+			if (typeResolutionsOn) {
+				const rule = matchTypeResolutions.find(r => r.match(acc.key))
+				if (rule) {
+					if (!acc.matchedKeyResolutionRules[rule.id])
+						acc.matchedKeyResolutionRules[rule.id] = [{ key:acc.key, rule }]
+					else
+						acc.matchedKeyResolutionRules[rule.id].push({ key:acc.key, rule })
+				}
+			}
 		} else {
 			if (item && t != 'object')
 				throw new Error(`Schema item[${i}] must be an object (e.g., { id: 'ID!', name: 'String' }). Found '${t}' instead.`)
@@ -205,7 +229,37 @@ const _transpileSchema = items => {
 
 		acc.keyOn = !acc.keyOn
 		return acc
-	}, { mergedItems:{}, keyOn:true, key:'' })
+	}, { mergedItems:{}, keyOn:true, key:'', matchedKeyResolutionRules:{} })
+
+	for (let [,keys] of Object.entries(matchedKeyResolutionRules)){
+		const l = keys.length
+		const rule = keys[0].rule
+		let obj = {}
+		let masterKey = ''
+		const reduceContext = {}
+		for (let i=0;i<l;i++) {
+			const key = keys[i].key
+			const body = mergedItems[key] || {}
+			obj = { ...obj, ...body }
+			if (!masterKey)
+				masterKey = key
+
+			if (rule.keepShortest) {
+				if (key.length < masterKey.length)
+					masterKey = key
+			} else if (rule.to)
+				masterKey = rule.to
+			else if (rule.reduce && typeof(rule.reduce) == 'function')
+				masterKey = rule.reduce(masterKey, key, reduceContext)
+			else // Default is rule.keepLongest
+			if (key.length > masterKey.length)
+				masterKey = key
+
+			delete mergedItems[key]
+		}
+
+		mergedItems[masterKey] = obj
+	}
 
 	let newLine = ''
 	for (let [def,body] of Object.entries(mergedItems)) {
