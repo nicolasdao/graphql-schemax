@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.0.8](https://github.com/nicolasdao/graphql-schemax/compare/v0.0.7...v0.0.8) (2021-11-01)
+
+
+### Features
+
+* Add support for a new API called 'addTypeResolutions' which can resolved advanced type conflicts ([e372dcd](https://github.com/nicolasdao/graphql-schemax/commit/e372dcd19d478af431d9f4a9cfd556bbc3d99e83))
+
 ### [0.0.7](https://github.com/nicolasdao/graphql-schemax/compare/v0.0.6...v0.0.7) (2021-10-21)
 
 ### [0.0.6](https://github.com/nicolasdao/graphql-schemax/compare/v0.0.5...v0.0.6) (2021-10-21)
