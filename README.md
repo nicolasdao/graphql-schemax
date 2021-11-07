@@ -95,7 +95,11 @@ schema {
 > * [Getting started](#getting-started)
 >	- [Quick overview](#quick-overview)
 >	- [Required anonymous types](#required-anonymous-types)
+>		- [Required anonymous Type and Input](#required-anonymous-type-and-input)
+>		- [Required anonymous Enum](#required-anonymous-enum)
 >	- [Naming anonymous types](#naming-anonymous-types)
+>		- [Naming anonymous Type and Input](#naming-anonymous-type-and-input)
+>		- [Naming anonymous Enum](#naming-anonymous-enum)
 >	- [Directives](#directives)
 > * [APIs](#apis)
 >	- [`constructor`](#constructor)
@@ -303,6 +307,7 @@ schema {
 Notice that `enum` definitions use arrays instead of objects.
 
 ## Required anonymous types
+### Required anonymous Type and Input 
 
 Use the `__required` property as follow:
 
@@ -345,7 +350,42 @@ schema {
 }
 ```
 
+### Required anonymous Enum
+
+To make an anonymous enum required, use the reserved `__required` string:
+
+```js
+const schema = [
+	'type Query', {
+		products:{ type:['car','home','furniture','__required'], ':':{ name:'String' } }
+	}
+]
+
+console.log(new Schemax(schema).toString())
+```
+
+```js
+type Query {
+	products(type: Enum_11845869194!): Type_12078318863
+}
+
+enum Enum_11845869194 {
+	car
+	furniture
+	home
+}
+
+type Type_12078318863 {
+	name: String
+}
+
+schema {
+	query: Query
+}
+```
+
 ## Naming anonymous types
+### Naming anonymous Type and Input 
 
 Use the `__name` property as follow:
 
@@ -382,6 +422,40 @@ type User {
 	first_name: String
 	last_name: String
 	email: String
+}
+
+schema {
+	query: Query
+}
+```
+
+### Naming anonymous Enum
+
+To use a custom enum, use the reserved `__name:YOUR_NAME` string:
+
+```js
+const schema = [
+	'type Query', {
+		products:{ type:['car','home','furniture','__name:ProductTypeEnum'], ':':{ name:'String' } }
+	}
+]
+
+console.log(new Schemax(schema).toString())
+```
+
+```js
+type Query {
+	products(type: ProductTypeEnum): Type_12078318863
+}
+
+enum ProductTypeEnum {
+	car
+	furniture
+	home
+}
+
+type Type_12078318863 {
+	name: String
 }
 
 schema {

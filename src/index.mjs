@@ -32,22 +32,27 @@ export function Schemax(...items) {
 /**
  * Compiles and body object into a GraphQL string body.
  * 
- * @param  {Object}	body					e.g., { id: 'ID!', name: 'String': '@aws_api_key': null, __required:true, __name:'Project' } or ['asc', 'desc']
+ * @param  {Object}		body					e.g., { id: 'ID!', name: 'String': '@aws_api_key': null, __required:true, __name:'Project' } or ['asc', 'desc']
+ * @param  {Boolean}	options.nestedBody
+ * @param  {String}		options.nestedBodyType
  * 
- * @return {Object}	output
- * @return {Object}		.dependencies[id]	where 'id' could be 'Input_3123213213' and the value 'input Input_3123213213 { id: ID name: String }''
- * @return {String}		.name				Value extracted from the '__name' property.
- * @return {Boolean}	.required			Value extracted from the '__required' property.
- * @return {Boolean}	.isArray			
- * @return {String}		.body				e.g., '{ id: ID! name: String @aws_api_key }'
+ * @return {Object}		output
+ * @return {Object}			.dependencies[id]	where 'id' could be 'Input_3123213213' and the value 'input Input_3123213213 { id: ID name: String }''
+ * @return {String}			.name				Value extracted from the '__name' property.
+ * @return {Boolean}		.required			Value extracted from the '__required' property.
+ * @return {Boolean}		.isArray
+ * @return {String}			.type				e.g., 'input', 'enum', 'type'
+ * @return {String}			.body				e.g., '{ id: ID! name: String @aws_api_key }'
  */
-const _compileBody = (body, indent='') => {
+const _compileBody = (body, options) => {
 	if (!body)
 		throw new Error('\'body\' is required.')
 	if (typeof(body) != 'object')
 		throw new Error(`'body' must be an object. Found '${typeof(body)}' instead.`)
 
-	indent = (indent||'')+'\t'
+	const { nestedBody, nestedBodyType='input' } = options||{}
+	let type = nestedBodyType
+	const indent = '\t'
 
 	let bodyString = '', 
 		dependencies = {}, 
@@ -61,6 +66,7 @@ const _compileBody = (body, indent='') => {
 		isArray = true
 	}
 
+	// ENUM
 	if (Array.isArray(_body)) {
 		const enums = _body.filter(x => x && x != '__required' && x.indexOf('__name') != 0)
 		if (!enums.length) 
@@ -72,7 +78,8 @@ const _compileBody = (body, indent='') => {
 		if (enumsName)
 			name = (enumsName.match(/:(.*?)$/)||[])[1] || ''
 		bodyString = indent + enums.sort((a,b) => a<b?-1:1).join(`\n${indent}`) + '\n'
-	} else {
+		type = 'enum'
+	} else { // TYPE OR INPUT
 		const fields = Object.keys(_body)
 		const l = fields.length
 		if (!l)
@@ -92,66 +99,81 @@ const _compileBody = (body, indent='') => {
 			else if (t == 'string')
 				bodyString += `${indent}${field}: ${fieldType}\n`
 			else if (t == 'object') { // Example: { where:{ id:'ID', name:'String' }, ':': '[Product]' } -> products(where: 'I_3123213213'): [Product]
-				const signatureArgs = Object.keys(fieldType)
-				const lastArg = signatureArgs.slice(-1)[0]
-				if (lastArg != ':')
-					throw new Error(`Last object's property in field '${field}' must be ':'. Found ${lastArg} instead.`)
+				if (nestedBody) {
+					const returnType = _compileBody(fieldType, { nestedBody:true, nestedBodyType })
+					const newTypeName = returnType.name || `${nestedBodyType == 'input' ? 'Input' : 'Type'}_${_getHashSuffix(returnType.body)}`.replace('-', '_')
 
-				let signature = ''
-				for (let j=0;j<signatureArgs.length;j++) {
-					const arg = signatureArgs[j]
-					const argValue = fieldType[arg]
-					const argValueType = typeof(argValue)
-					if (arg == ':') {
-						if (signature)
-							signature = `(${signature})`
-						if (!argValue)
-							throw new Error(`Missing return type in field '${field}'.`)
-						if (argValueType == 'string')
-							bodyString += `${indent}${field}${signature}: ${argValue}\n`
-						else if (argValueType == 'object') {
-							const returnType = _compileBody(argValue)
-							const newTypeName = returnType.name || `Type_${_getHashSuffix(returnType.body)}`.replace('-', '_')
-							const brackets = returnType.isArray ? ['[',']'] : ['','']
-							dependencies = { 
-								...dependencies, 
-								...returnType.dependencies,
-								[newTypeName]: `type ${newTypeName} ${returnType.body}`
-							}
-							bodyString += `${indent}${field}${signature}: ${brackets[0]}${newTypeName}${brackets[1]}${returnType.required ? '!' : ''}\n`
-						} else 
-							throw new Error(`Unsupported return type in field '${field}'. Supported types are 'string' and 'object'. Found '${argValueType}' instead.`)
-					} else {
-						if (!argValue)
-							throw new Error(`Missing type on argument '${arg}' in field '${field}'.`)
-						const sep = signature ? ', ' : ''
-						if (argValueType == 'string')
-							signature += `${sep}${arg}: ${argValue}`
-						else if (argValueType == 'object') {
-							const returnType = _compileBody(argValue)
-							const newTypeName = returnType.name || `Input_${_getHashSuffix(returnType.body)}`.replace('-', '_')
-							const brackets = returnType.isArray ? ['[',']'] : ['','']
-							dependencies = { 
-								...dependencies, 
-								...returnType.dependencies,
-								[newTypeName]: `input ${newTypeName} ${returnType.body}`
-							}
-							signature += `${sep}${arg}: ${brackets[0]}${newTypeName}${brackets[1]}${returnType.required ? '!' : ''}`
-						} else if (argValueType == 'array') {
-							const returnType = _compileBody(argValue)
-							const newTypeName = returnType.name || `Enum_${_getHashSuffix(returnType.body)}`.replace('-', '_')
-							dependencies = { 
-								...dependencies, 
-								...returnType.dependencies,
-								[newTypeName]: `enum ${newTypeName} ${returnType.body}`
-							}
-							signature += `${sep}${arg}: ${newTypeName}${returnType.required ? '!' : ''}`
-						} else 
-							throw new Error(`Unsupported return type in field '${field}'. Supported types are 'string' and 'object'. Found '${argValueType}' instead.`)
+					const brackets = returnType.isArray ? ['[',']'] : ['','']
+					dependencies = { 
+						...dependencies, 
+						...returnType.dependencies,
+						[newTypeName]: `${returnType.type} ${newTypeName} ${returnType.body}`
+					}
+					bodyString += `${indent}${field}: ${brackets[0]}${newTypeName}${brackets[1]}${returnType.required ? '!' : ''}\n`
+				} else {
+					const signatureArgs = Object.keys(fieldType)
+					const lastArg = signatureArgs.slice(-1)[0]
+					if (lastArg != ':')
+						throw new Error(`Last object's property in field '${field}' must be ':'. Found ${lastArg} instead.`)
+
+					let signature = ''
+					for (let j=0;j<signatureArgs.length;j++) {
+						const arg = signatureArgs[j]
+						const argValue = fieldType[arg]
+						const argValueType = typeof(argValue)
+						// console.log({ arg, argValue, argValueType })
+						if (arg == ':') {
+							if (signature)
+								signature = `(${signature})`
+							if (!argValue)
+								throw new Error(`Missing return type in field '${field}'.`)
+							if (argValueType == 'string')
+								bodyString += `${indent}${field}${signature}: ${argValue}\n`
+							else if (argValueType == 'object') {
+								const returnType = _compileBody(argValue, { nestedBody:true, nestedBodyType:'type' })
+								const newTypeName = returnType.name || `Type_${_getHashSuffix(returnType.body)}`.replace('-', '_')
+								const brackets = returnType.isArray ? ['[',']'] : ['','']
+								dependencies = { 
+									...dependencies, 
+									...returnType.dependencies,
+									[newTypeName]: `type ${newTypeName} ${returnType.body}`
+								}
+								bodyString += `${indent}${field}${signature}: ${brackets[0]}${newTypeName}${brackets[1]}${returnType.required ? '!' : ''}\n`
+							} else 
+								throw new Error(`Unsupported return type in field '${field}'. Supported types are 'string' and 'object'. Found '${argValueType}' instead.`)
+						} else {
+							if (!argValue)
+								throw new Error(`Missing type on argument '${arg}' in field '${field}'.`)
+
+							const sep = signature ? ', ' : ''
+							if (argValueType == 'string')
+								signature += `${sep}${arg}: ${argValue}`
+							else if (argValueType == 'object') {
+								const returnType = _compileBody(argValue, { nestedBody:true, nestedBodyType })
+								const newTypeName = returnType.name || `${returnType.type == 'enum' ? 'Enum' : 'Input'}_${_getHashSuffix(returnType.body)}`.replace('-', '_')
+								const brackets = returnType.isArray ? ['[',']'] : ['','']
+								dependencies = { 
+									...dependencies, 
+									...returnType.dependencies,
+									[newTypeName]: `${returnType.type} ${newTypeName} ${returnType.body}`
+								}
+								signature += `${sep}${arg}: ${brackets[0]}${newTypeName}${brackets[1]}${returnType.required ? '!' : ''}`
+							} else if (argValueType == 'array') {
+								const returnType = _compileBody(argValue, { nestedBody:true, nestedBodyType })
+								const newTypeName = returnType.name || `Enum_${_getHashSuffix(returnType.body)}`.replace('-', '_')
+								dependencies = { 
+									...dependencies, 
+									...returnType.dependencies,
+									[newTypeName]: `enum ${newTypeName} ${returnType.body}`
+								}
+								signature += `${sep}${arg}: ${newTypeName}${returnType.required ? '!' : ''}`
+							} else 
+								throw new Error(`Unsupported return type in field '${field}'. Supported types are 'string' and 'object'. Found '${argValueType}' instead.`)
+						}
 					}
 				}
 			} else if (t == 'array') { 
-				const returnType = _compileBody(fieldType)
+				const returnType = _compileBody(fieldType, { nestedBody:true, nestedBodyType })
 				const newTypeName = returnType.name || `Enum_${_getHashSuffix(returnType.body)}`.replace('-', '_')
 				dependencies = { 
 					...dependencies, 
@@ -167,6 +189,7 @@ const _compileBody = (body, indent='') => {
 	return {
 		dependencies,
 		name,
+		type,
 		required,
 		isArray,
 		body: `{\n${bodyString}}`

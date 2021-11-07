@@ -1039,6 +1039,287 @@ describe('Schemax', () => {
 			// console.log(schema.toString())
 			assert.equal(compressString(schema.toString()), expected)
 		})
+		it('10 - Should support custom names on enums', () => {
+			const expected = compressString(`
+			type Query {
+				products(type: ProductTypeEnum): Type_12078318863
+			}
+
+			enum ProductTypeEnum {
+				car
+				furniture
+				home
+			}
+
+			type Type_12078318863 {
+				name: String
+			}
+
+			schema {
+				query: Query
+			}`)
+
+			const schema = [
+				'type Query', {
+					products:{ type:['car','home','furniture','__name:ProductTypeEnum'], ':':{ name:'String' } }
+				}
+			]
+
+			assert.equal(compressString(new Schemax(schema).toString()), expected)
+		})
+		it('11 - Should support required anonymous enums', () => {
+			const expected = compressString(`
+			type Query {
+				products(type: ProductTypeEnum!): Type_12078318863
+			}
+
+			enum ProductTypeEnum {
+				car
+				furniture
+				home
+			}
+
+			type Type_12078318863 {
+				name: String
+			}
+
+			schema {
+				query: Query
+			}`)
+
+			const schema = [
+				'type Query', {
+					products:{ type:['car','home','furniture','__name:ProductTypeEnum','__required'], ':':{ name:'String' } }
+				}
+			]
+
+			assert.equal(compressString(new Schemax(schema).toString()), expected)
+		})
+		it('12 - Should support array of anonymous enums', () => {
+			const expected = compressString(`
+			type Query {
+				products(type: [ProductTypeEnum]!): Type_12078318863
+			}
+
+			enum ProductTypeEnum {
+				car
+				furniture
+				home
+			}
+
+			type Type_12078318863 {
+				name: String
+			}
+
+			schema {
+				query: Query
+			}`)
+
+			const schema = [
+				'type Query', {
+					products:{ type:[['car','home','furniture','__name:ProductTypeEnum','__required']], ':':{ name:'String' } }
+				}
+			]
+
+			assert.equal(compressString(new Schemax(schema).toString()), expected)
+		})
+		it('13 - Should support nested complex objects', () => {
+			const expected = compressString(`
+			type Folder {
+				id: ID!
+			}
+
+			type Query {
+				folders(where: WhereInput): [FoldersOutputType]
+			}
+
+			enum UnitEnum {
+				gb
+				kb
+				mb
+			}
+
+			input SizeInput {
+				unit: UnitEnum
+				value: Float
+			}
+
+			input FolderSearchInput {
+				id: ID
+				name: String
+				recursive: Boolean
+				size: SizeInput
+			}
+
+			input WhereInput {
+				id: ID
+				name: String
+				folder: FolderSearchInput
+				team: FolderSearchInput
+			}
+
+			enum TypeEnum {
+				recursive
+				standard
+			}
+
+			type RelationType {
+				parent: Boolean
+			}
+
+			type CursorType {
+				start: Int
+				end: Int
+				type: TypeEnum
+				relation: RelationType
+			}
+
+			enum AccessEnum {
+				private
+				public
+			}
+
+			type FoldersOutputType {
+				cursor: CursorType
+				data: [Folder]
+				type: AccessEnum
+			}
+
+			schema {
+				query: Query
+			}`)
+
+			const FolderSearch = {
+				id: 'ID', 
+				name: 'String',
+				recursive: 'Boolean',
+				size: {
+					unit:['kb','mb','gb','__name:UnitEnum'],
+					value:'Float',
+					__name:'SizeInput'
+				},
+				__name:'FolderSearchInput'
+			}
+
+			const schema = [
+				'type Folder', {
+					id:'ID!'
+				},
+				'type Query', {
+					folders:{ where: { id:'ID', name:'String', folder:FolderSearch, team:FolderSearch, __name:'WhereInput' }, ':':[{
+						cursor:{ start:'Int', end:'Int', type:['recursive','standard','__name:TypeEnum'], relation:{ parent:'Boolean', __name:'RelationType' }, __name:'CursorType' },
+						data:'[Folder]',
+						type:['private', 'public','__name:AccessEnum'],
+						__name:'FoldersOutputType'
+					}] }
+				}
+			]
+
+			// console.log(new Schemax(schema).toString())
+			assert.equal(compressString(new Schemax(schema).toString()), expected)
+		})
+		it('14 - Should support nested complex objects in fields', () => {
+			const expected = compressString(`
+			type Folder {
+				id: ID!
+				subFolders(where: WhereSubFolderInput): [Folder]
+			}
+
+			type Query {
+				folders(where: WhereInput): [FoldersOutputType]
+			}
+
+			input WhereSubFolderInput {
+				id: ID
+				name: String
+			}
+
+			enum UnitEnum {
+				gb
+				kb
+				mb
+			}
+
+			input SizeInput {
+				unit: UnitEnum
+				value: Float
+			}
+
+			input FolderSearchInput {
+				id: ID
+				name: String
+				recursive: Boolean
+				size: SizeInput
+			}
+
+			input WhereInput {
+				id: ID
+				name: String
+				folder: FolderSearchInput
+				team: FolderSearchInput
+			}
+
+			enum TypeEnum {
+				recursive
+				standard
+			}
+
+			type RelationType {
+				parent: Boolean
+			}
+
+			type CursorType {
+				start: Int
+				end: Int
+				type: TypeEnum
+				relation: RelationType
+			}
+
+			enum AccessEnum {
+				private
+				public
+			}
+
+			type FoldersOutputType {
+				cursor: CursorType
+				data: [Folder]
+				type: AccessEnum
+			}
+
+			schema {
+				query: Query
+			}`)
+
+			const FolderSearch = {
+				id: 'ID', 
+				name: 'String',
+				recursive: 'Boolean',
+				size: {
+					unit:['kb','mb','gb','__name:UnitEnum'],
+					value:'Float',
+					__name:'SizeInput'
+				},
+				__name:'FolderSearchInput'
+			}
+
+			const schema = [
+				'type Folder', {
+					id:'ID!',
+					subFolders: { where:{ id:'ID', name:'String', __name:'WhereSubFolderInput' }, ':':'[Folder]' }
+				},
+				'type Query', {
+					folders:{ where: { id:'ID', name:'String', folder:FolderSearch, team:FolderSearch, __name:'WhereInput' }, ':':[{
+						cursor:{ start:'Int', end:'Int', type:['recursive','standard','__name:TypeEnum'], relation:{ parent:'Boolean', __name:'RelationType' }, __name:'CursorType' },
+						data:'[Folder]',
+						type:['private', 'public','__name:AccessEnum'],
+						__name:'FoldersOutputType'
+					}] }
+				}
+			]
+
+			// console.log(new Schemax(schema).toString())
+			assert.equal(compressString(new Schemax(schema).toString()), expected)
+		})
 	})
 	describe('.add()', () => {
 		it('01 - Should merge multiple schemax into a single valid GraphQL schema.', () => {
