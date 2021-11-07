@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.0.9](https://github.com/nicolasdao/graphql-schemax/compare/v0.0.8...v0.0.9) (2021-11-07)
+
+
+### Bug Fixes
+
+* Nested complex objects are ignored ([b140f1c](https://github.com/nicolasdao/graphql-schemax/commit/b140f1cbee36d79a4ddb835575e7b2182251dbb2))
+
 ### [0.0.8](https://github.com/nicolasdao/graphql-schemax/compare/v0.0.7...v0.0.8) (2021-11-01)
 
 
