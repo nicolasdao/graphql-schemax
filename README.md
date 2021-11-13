@@ -1066,6 +1066,8 @@ npm run build
 
 This command compiles the ES6 modules located under the `src` folder to `.cjs` file sent to the `dist` folder.
 
+> This command is aitomatically executed before exah deployment to make sure the latest build is always depployed.
+
 ## Unit test
 
 ```
