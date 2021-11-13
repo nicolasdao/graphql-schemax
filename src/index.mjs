@@ -89,33 +89,29 @@ const _compileBody = (body, options) => {
 
 		for (let i=0;i<l;i++) {
 			const field = fields[i]
-			const fieldType = _body[field]
-			const t = Array.isArray(fieldType) ? 'array' : typeof(fieldType)
+			const fieldBody = _body[field]
+			const t = Array.isArray(fieldBody) ? 'array' : typeof(fieldBody)
 			if (field.indexOf('__') == 0) {
 				if (field == '__name')
-					name = fieldType
+					name = fieldBody
 				else if (field == '__required')
-					required = fieldType
+					required = fieldBody
 				else if (field == '__noempty')
-					noempty = fieldType
-			} else if (!fieldType)
+					noempty = fieldBody
+			} else if (!fieldBody)
 				bodyString += `${indent}${field}\n`
 			else if (t == 'string')
-				bodyString += `${indent}${field}: ${fieldType}\n`
+				bodyString += `${indent}${field}: ${fieldBody}\n`
 			else if (t == 'object') { // Example: { where:{ id:'ID', name:'String' }, ':': '[Product]' } -> products(where: 'I_3123213213'): [Product]
 				if (nestedBody) {
-					const returnType = _compileBody(fieldType, { nestedBody:true, nestedBodyType })
-					const newTypeName = returnType.name || `${nestedBodyType == 'input' ? 'Input' : 'Type'}_${_getHashSuffix(returnType.body)}`.replace('-', '_')
-					const brackets = returnType.isArray ? ['[',']'] : ['','']
-					dependencies = { 
-						...dependencies, 
-						...returnType.dependencies,
-						[newTypeName]: `${returnType.type} ${newTypeName} ${returnType.body}`
+					const f = _compileField({ field, fieldBody, nestedBodyType, indent })
+					dependencies = {
+						...dependencies,
+						...f.dependencies
 					}
-					const nonEmptyArraySign = brackets[0] == '[' && returnType.noempty ? '!' : ''
-					bodyString += `${indent}${field}: ${brackets[0]}${newTypeName}${nonEmptyArraySign}${brackets[1]}${returnType.required ? '!' : ''}\n`
+					bodyString += f.bodyString
 				} else {
-					const signatureArgs = Object.keys(fieldType)
+					const signatureArgs = Object.keys(fieldBody)
 					const lastArg = signatureArgs.slice(-1)[0]
 					if (lastArg != ':')
 						throw new Error(`Last object's property in field '${field}' must be ':'. Found ${lastArg} instead.`)
@@ -123,9 +119,8 @@ const _compileBody = (body, options) => {
 					let signature = ''
 					for (let j=0;j<signatureArgs.length;j++) {
 						const arg = signatureArgs[j]
-						const argValue = fieldType[arg]
+						const argValue = fieldBody[arg]
 						const argValueType = typeof(argValue)
-						// console.log({ arg, argValue, argValueType })
 						if (arg == ':') {
 							if (signature)
 								signature = `(${signature})`
@@ -134,16 +129,12 @@ const _compileBody = (body, options) => {
 							if (argValueType == 'string')
 								bodyString += `${indent}${field}${signature}: ${argValue}\n`
 							else if (argValueType == 'object') {
-								const returnType = _compileBody(argValue, { nestedBody:true, nestedBodyType:'type' })
-								const newTypeName = returnType.name || `Type_${_getHashSuffix(returnType.body)}`.replace('-', '_')
-								const brackets = returnType.isArray ? ['[',']'] : ['','']
-								dependencies = { 
-									...dependencies, 
-									...returnType.dependencies,
-									[newTypeName]: `type ${newTypeName} ${returnType.body}`
+								const f = _compileField({ field, fieldBody:argValue, nestedBodyType:'type', indent, signature })
+								dependencies = {
+									...dependencies,
+									...f.dependencies
 								}
-								const nonEmptyArraySign = brackets[0] == '[' && returnType.noempty ? '!' : ''
-								bodyString += `${indent}${field}${signature}: ${brackets[0]}${newTypeName}${nonEmptyArraySign}${brackets[1]}${returnType.required ? '!' : ''}\n`
+								bodyString += f.bodyString
 							} else 
 								throw new Error(`Unsupported return type in field '${field}'. Supported types are 'string' and 'object'. Found '${argValueType}' instead.`)
 						} else {
@@ -154,41 +145,31 @@ const _compileBody = (body, options) => {
 							if (argValueType == 'string')
 								signature += `${sep}${arg}: ${argValue}`
 							else if (argValueType == 'object') {
-								const returnType = _compileBody(argValue, { nestedBody:true, nestedBodyType })
-								const newTypeName = returnType.name || `${returnType.type == 'enum' ? 'Enum' : 'Input'}_${_getHashSuffix(returnType.body)}`.replace('-', '_')
-								const brackets = returnType.isArray ? ['[',']'] : ['','']
-								dependencies = { 
-									...dependencies, 
-									...returnType.dependencies,
-									[newTypeName]: `${returnType.type} ${newTypeName} ${returnType.body}`
+								const f = _compileField({ field:arg, fieldBody:argValue, nestedBodyType, indent:sep })
+								dependencies = {
+									...dependencies,
+									...f.dependencies
 								}
-								const nonEmptyArraySign = brackets[0] == '[' && returnType.noempty ? '!' : ''
-								signature += `${sep}${arg}: ${brackets[0]}${newTypeName}${nonEmptyArraySign}${brackets[1]}${returnType.required ? '!' : ''}`
+								signature += f.bodyString
 							} else if (argValueType == 'array') {
-								const returnType = _compileBody(argValue, { nestedBody:true, nestedBodyType })
-								const newTypeName = returnType.name || `Enum_${_getHashSuffix(returnType.body)}`.replace('-', '_')
-								dependencies = { 
-									...dependencies, 
-									...returnType.dependencies,
-									[newTypeName]: `enum ${newTypeName} ${returnType.body}`
+								const f = _compileField({ field:arg, fieldBody:argValue, nestedBodyType:'enum', indent:sep })
+								dependencies = {
+									...dependencies,
+									...f.dependencies
 								}
-								signature += `${sep}${arg}: ${newTypeName}${returnType.required ? '!' : ''}`
+								signature += f.bodyString
 							} else 
 								throw new Error(`Unsupported return type in field '${field}'. Supported types are 'string' and 'object'. Found '${argValueType}' instead.`)
 						}
 					}
 				}
 			} else if (t == 'array') { 
-				const returnType = _compileBody(fieldType, { nestedBody:true, nestedBodyType })
-				const newTypeName = returnType.name || `Enum_${_getHashSuffix(returnType.body)}`.replace('-', '_')
-				const brackets = returnType.isArray ? ['[',']'] : ['','']
-				dependencies = { 
-					...dependencies, 
-					...returnType.dependencies,
-					[newTypeName]: `enum ${newTypeName} ${returnType.body}`
+				const f = _compileField({ field, fieldBody, nestedBodyType:'enum', indent })
+				dependencies = {
+					...dependencies,
+					...f.dependencies
 				}
-				const nonEmptyArraySign = brackets[0] == '[' && returnType.noempty ? '!' : ''
-				bodyString += `${indent}${field}: ${brackets[0]}${newTypeName}${nonEmptyArraySign}${brackets[1]}${returnType.required ? '!' : ''}\n`
+				bodyString += f.bodyString
 			} else
 				throw new Error(`Field '${field}' must be null, a string or an object. Found '${t}' instead.`)
 		}	
@@ -202,6 +183,38 @@ const _compileBody = (body, options) => {
 		noempty,
 		isArray,
 		body: `{\n${bodyString}}`
+	}
+}
+
+/**
+ * 
+ * @param  {String} field				e.g., 'user', 'products', 'name', 'email'			
+ * @param  {Object} fieldBody			e.g., { name: 'String!', description: 'String' }, [ 'create_date', 'name' ]
+ * @param  {String} nestedBodyType		e.g., 'input', 'type', 'enum'		
+ * @param  {String} indent				
+ * @param  {String} signature			Used for field's argument (e.g., '(where: Input_11294185835!\n)')
+ * 					
+ * @return {Object} output
+ * @return {String}		.bodyString		e.g., 'user: Input_1743483650\n'
+ * @return {String}		.dependencies	e.g., { Input_1743483650: 'input Input_1743483650 {\n\tname: String!\n\tdescription: String\n}' }
+ */
+const _compileField = ({ field, fieldBody, nestedBodyType, indent, signature='' }) => {
+	const returnType = _compileBody(fieldBody, { nestedBody:true, nestedBodyType })
+
+	const newTypeName = returnType.name || `${returnType.type.replace(/^./,s => s.toUpperCase())}_${_getHashSuffix(returnType.body)}`.replace('-', '_')
+	const brackets = returnType.isArray ? ['[',']'] : ['','']
+	const dependencies = { 
+		...returnType.dependencies,
+		[newTypeName]: `${returnType.type} ${newTypeName} ${returnType.body}`
+	}
+	const nonEmptyArraySign = brackets[0] == '[' && returnType.noempty ? '!' : ''
+	if (signature)
+		signature = signature.replace(/\n/g,'')
+	const bodyString = `${indent}${field}${signature}: ${brackets[0]}${newTypeName}${nonEmptyArraySign}${brackets[1]}${returnType.required ? '!' : ''}\n`
+		
+	return {
+		dependencies,
+		bodyString
 	}
 }
 

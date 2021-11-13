@@ -1349,17 +1349,20 @@ describe('Schemax', () => {
 
 			const schema = [
 				'type Mutation', {
-					invite: { users:[{ 
-						id:'ID', 
-						email:'String', 
-						roles:[['admin','writer','reader','__required','__noempty','__name:RoleEnum']],
-						__required:true, 
-						__noempty:true, 
-						__name:'UserInviteInput' 
-					}], ':':{ message:'String', __name:'Message' } }
+					invite: { 
+						users:[{ 
+							id:'ID', 
+							email:'String', 
+							roles:[['admin','writer','reader','__required','__noempty','__name:RoleEnum']],
+							__required:true, 
+							__noempty:true, 
+							__name:'UserInviteInput' 
+						}],
+						':':{ message:'String', __name:'Message' } }
 				}
 			]
 
+			// console.log(new Schemax(schema).toString())
 			assert.equal(compressString(new Schemax(schema).toString()), expected)
 		})
 	})

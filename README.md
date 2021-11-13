@@ -365,6 +365,8 @@ const schema = [
 console.log(new Schemax(schema).toString())
 ```
 
+Which outputs:
+
 ```js
 type Query {
 	products(type: Enum_11845869194!): Type_12078318863
@@ -386,6 +388,52 @@ schema {
 ```
 
 ### Required non-empty anonymous array
+
+Use the `__noempty` keyword to create enums similar to `[RoleEnum!]`. 
+
+```js
+const schema = [
+	'type Mutation', {
+		invite: { users:[{ 
+			id:'ID', 
+			email:'String', 
+			roles:[['admin','writer','reader','__required','__noempty','__name:RoleEnum']],
+			__noempty:true, 
+			__name:'UserInviteInput' 
+		}], ':':{ message:'String', __name:'Message' } }
+	}
+]
+
+console.log(new Schemax(schema).toString())
+```
+
+Which outputs:
+
+```js
+type Mutation {
+	invite(users: [UserInviteInput!]): Message
+}
+
+enum RoleEnum {
+	admin
+	reader
+	writer
+}
+
+input UserInviteInput {
+	id: ID
+	email: String
+	roles: [RoleEnum!]!
+}
+
+type Message {
+	message: String
+}
+
+schema {
+	mutation: Mutation
+}
+```
 
 ## Naming anonymous types
 ### Naming anonymous Type and Input 
