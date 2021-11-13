@@ -58,7 +58,8 @@ const _compileBody = (body, options) => {
 		dependencies = {}, 
 		name, 
 		required = false,
-		isArray = false
+		isArray = false,
+		noempty = false
 
 	let _body = body
 	if (Array.isArray(body) && _body.length == 1 && typeof(_body[0]) == 'object') {
@@ -68,12 +69,13 @@ const _compileBody = (body, options) => {
 
 	// ENUM
 	if (Array.isArray(_body)) {
-		const enums = _body.filter(x => x && x != '__required' && x.indexOf('__name') != 0)
+		const enums = _body.filter(x => x && x != '__required' && x != '__noempty' && x.indexOf('__name') != 0)
 		if (!enums.length) 
 			throw new Error('Invalid \'body\'. Array cannot be empty.')
 		if (enums.some(x => typeof(x) != 'string'))
 			throw new Error('Invalid \'body\' item. When \'body\' is an array, all items must be strings.')
 		required = _body.some(x => x == '__required')
+		noempty = _body.some(x => x == '__noempty')
 		const enumsName = _body.find(x => x && x.indexOf('__name') == 0)
 		if (enumsName)
 			name = (enumsName.match(/:(.*?)$/)||[])[1] || ''
@@ -94,6 +96,8 @@ const _compileBody = (body, options) => {
 					name = fieldType
 				else if (field == '__required')
 					required = fieldType
+				else if (field == '__noempty')
+					noempty = fieldType
 			} else if (!fieldType)
 				bodyString += `${indent}${field}\n`
 			else if (t == 'string')
@@ -102,14 +106,14 @@ const _compileBody = (body, options) => {
 				if (nestedBody) {
 					const returnType = _compileBody(fieldType, { nestedBody:true, nestedBodyType })
 					const newTypeName = returnType.name || `${nestedBodyType == 'input' ? 'Input' : 'Type'}_${_getHashSuffix(returnType.body)}`.replace('-', '_')
-
 					const brackets = returnType.isArray ? ['[',']'] : ['','']
 					dependencies = { 
 						...dependencies, 
 						...returnType.dependencies,
 						[newTypeName]: `${returnType.type} ${newTypeName} ${returnType.body}`
 					}
-					bodyString += `${indent}${field}: ${brackets[0]}${newTypeName}${brackets[1]}${returnType.required ? '!' : ''}\n`
+					const nonEmptyArraySign = brackets[0] == '[' && returnType.noempty ? '!' : ''
+					bodyString += `${indent}${field}: ${brackets[0]}${newTypeName}${nonEmptyArraySign}${brackets[1]}${returnType.required ? '!' : ''}\n`
 				} else {
 					const signatureArgs = Object.keys(fieldType)
 					const lastArg = signatureArgs.slice(-1)[0]
@@ -138,7 +142,8 @@ const _compileBody = (body, options) => {
 									...returnType.dependencies,
 									[newTypeName]: `type ${newTypeName} ${returnType.body}`
 								}
-								bodyString += `${indent}${field}${signature}: ${brackets[0]}${newTypeName}${brackets[1]}${returnType.required ? '!' : ''}\n`
+								const nonEmptyArraySign = brackets[0] == '[' && returnType.noempty ? '!' : ''
+								bodyString += `${indent}${field}${signature}: ${brackets[0]}${newTypeName}${nonEmptyArraySign}${brackets[1]}${returnType.required ? '!' : ''}\n`
 							} else 
 								throw new Error(`Unsupported return type in field '${field}'. Supported types are 'string' and 'object'. Found '${argValueType}' instead.`)
 						} else {
@@ -157,7 +162,8 @@ const _compileBody = (body, options) => {
 									...returnType.dependencies,
 									[newTypeName]: `${returnType.type} ${newTypeName} ${returnType.body}`
 								}
-								signature += `${sep}${arg}: ${brackets[0]}${newTypeName}${brackets[1]}${returnType.required ? '!' : ''}`
+								const nonEmptyArraySign = brackets[0] == '[' && returnType.noempty ? '!' : ''
+								signature += `${sep}${arg}: ${brackets[0]}${newTypeName}${nonEmptyArraySign}${brackets[1]}${returnType.required ? '!' : ''}`
 							} else if (argValueType == 'array') {
 								const returnType = _compileBody(argValue, { nestedBody:true, nestedBodyType })
 								const newTypeName = returnType.name || `Enum_${_getHashSuffix(returnType.body)}`.replace('-', '_')
@@ -175,12 +181,14 @@ const _compileBody = (body, options) => {
 			} else if (t == 'array') { 
 				const returnType = _compileBody(fieldType, { nestedBody:true, nestedBodyType })
 				const newTypeName = returnType.name || `Enum_${_getHashSuffix(returnType.body)}`.replace('-', '_')
+				const brackets = returnType.isArray ? ['[',']'] : ['','']
 				dependencies = { 
 					...dependencies, 
 					...returnType.dependencies,
 					[newTypeName]: `enum ${newTypeName} ${returnType.body}`
 				}
-				bodyString += `${indent}${field}: ${newTypeName}${returnType.required ? '!' : ''}\n`
+				const nonEmptyArraySign = brackets[0] == '[' && returnType.noempty ? '!' : ''
+				bodyString += `${indent}${field}: ${brackets[0]}${newTypeName}${nonEmptyArraySign}${brackets[1]}${returnType.required ? '!' : ''}\n`
 			} else
 				throw new Error(`Field '${field}' must be null, a string or an object. Found '${t}' instead.`)
 		}	
@@ -191,6 +199,7 @@ const _compileBody = (body, options) => {
 		name,
 		type,
 		required,
+		noempty,
 		isArray,
 		body: `{\n${bodyString}}`
 	}

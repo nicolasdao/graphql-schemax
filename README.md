@@ -97,6 +97,7 @@ schema {
 >	- [Required anonymous types](#required-anonymous-types)
 >		- [Required anonymous Type and Input](#required-anonymous-type-and-input)
 >		- [Required anonymous Enum](#required-anonymous-enum)
+>		- [Required non-empty anonymous array](#required-non-empty-anonymous-array)
 >	- [Naming anonymous types](#naming-anonymous-types)
 >		- [Naming anonymous Type and Input](#naming-anonymous-type-and-input)
 >		- [Naming anonymous Enum](#naming-anonymous-enum)
@@ -383,6 +384,8 @@ schema {
 	query: Query
 }
 ```
+
+### Required non-empty anonymous array
 
 ## Naming anonymous types
 ### Naming anonymous Type and Input 
