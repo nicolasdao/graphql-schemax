@@ -310,7 +310,7 @@ Notice that `enum` definitions use arrays instead of objects.
 ## Required anonymous types
 ### Required anonymous Type and Input 
 
-Use the `__required` property as follow:
+Use the `__required` property or its alias `!` as follow:
 
 ```js
 const schema = new Schemax(
@@ -326,6 +326,8 @@ const schema = new Schemax(
 
 console.log(schema.toString())
 ```
+
+> With the alias: `users: { where: { id:'ID', first_name:'String', '!':true }, ':': [{`
 
 Which outputs:
 
@@ -353,7 +355,7 @@ schema {
 
 ### Required anonymous Enum
 
-To make an anonymous enum required, use the reserved `__required` string:
+To make an anonymous enum required, use the reserved `__required` string, or its alias `!`:
 
 ```js
 const schema = [
@@ -364,6 +366,8 @@ const schema = [
 
 console.log(new Schemax(schema).toString())
 ```
+
+> With the alias: `['car','home','furniture','!']`
 
 Which outputs:
 
@@ -389,7 +393,7 @@ schema {
 
 ### Required non-empty anonymous array
 
-Use the `__noempty` keyword to create enums similar to `[RoleEnum!]`. 
+Use the `__noempty` keyword or its alias `!0` to create enums similar to `[RoleEnum!]`. 
 
 ```js
 const schema = [
@@ -406,6 +410,8 @@ const schema = [
 
 console.log(new Schemax(schema).toString())
 ```
+
+> With the alias: `roles:[['admin','writer','reader','__required','!0','__name:RoleEnum']]`
 
 Which outputs:
 
@@ -438,7 +444,7 @@ schema {
 ## Naming anonymous types
 ### Naming anonymous Type and Input 
 
-Use the `__name` property as follow:
+Use the `__name` property or its alias `#` as follow:
 
 ```js
 const schema = new Schemax(
@@ -455,6 +461,8 @@ const schema = new Schemax(
 
 console.log(schema.toString())
 ```
+
+> With the alias: `users: { where: { id:'ID', first_name:'String', __required:true, '#': 'WhereUserInput' }, ':': [{`
 
 Which outputs:
 
@@ -482,7 +490,7 @@ schema {
 
 ### Naming anonymous Enum
 
-To use a custom enum, use the reserved `__name:YOUR_NAME` string:
+To use a custom enum, use the reserved `__name:YOUR_NAME` string or its alias version `#YOUR_NAME`:
 
 ```js
 const schema = [
@@ -493,6 +501,9 @@ const schema = [
 
 console.log(new Schemax(schema).toString())
 ```
+
+> With the alias: `['car','home','furniture','#ProductTypeEnum']`
+> NOTICE: With the `#` alias, the `:` is dropped.
 
 ```js
 type Query {

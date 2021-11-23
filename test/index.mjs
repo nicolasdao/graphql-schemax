@@ -1365,6 +1365,51 @@ describe('Schemax', () => {
 			// console.log(new Schemax(schema).toString())
 			assert.equal(compressString(new Schemax(schema).toString()), expected)
 		})
+		it('16 - Should support for shortcuts \'!\', \'!0\' and \'#\' to respectively replace \'__required\', \'__noempty\', and \'__name\'', () => {
+
+			const expected = compressString(`
+			type Mutation {
+				invite(users: [UserInviteInput!]!): Message
+			}
+
+			enum RoleEnum {
+				admin
+				reader
+				writer
+			}
+
+			input UserInviteInput {
+				id: ID
+				email: String
+				roles: [RoleEnum!]!
+			}
+
+			type Message {
+				message: String
+			}
+
+			schema {
+				mutation: Mutation
+			}`)
+
+			const schema = [
+				'type Mutation', {
+					invite: { 
+						users:[{ 
+							id:'ID', 
+							email:'String', 
+							roles:[['admin','writer','reader','!','!0','#RoleEnum']],
+							'!': true, 
+							'!0': true, 
+							'#': 'UserInviteInput' 
+						}],
+						':':{ message:'String', '#':'Message' } }
+				}
+			]
+
+			// console.log(new Schemax(schema).toString())
+			assert.equal(compressString(new Schemax(schema).toString()), expected)
+		})
 	})
 	describe('.add()', () => {
 		it('01 - Should merge multiple schemax into a single valid GraphQL schema.', () => {

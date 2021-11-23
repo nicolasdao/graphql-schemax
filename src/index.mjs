@@ -69,16 +69,16 @@ const _compileBody = (body, options) => {
 
 	// ENUM
 	if (Array.isArray(_body)) {
-		const enums = _body.filter(x => x && x != '__required' && x != '__noempty' && x.indexOf('__name') != 0)
+		const enums = _body.filter(x => x && x != '__required' && x != '!' && x != '__noempty' && x != '!0' && x.indexOf('__name') != 0 && x.indexOf('#') != 0)
 		if (!enums.length) 
 			throw new Error('Invalid \'body\'. Array cannot be empty.')
 		if (enums.some(x => typeof(x) != 'string'))
 			throw new Error('Invalid \'body\' item. When \'body\' is an array, all items must be strings.')
-		required = _body.some(x => x == '__required')
-		noempty = _body.some(x => x == '__noempty')
-		const enumsName = _body.find(x => x && x.indexOf('__name') == 0)
+		required = _body.some(x => x == '__required' || x == '!')
+		noempty = _body.some(x => x == '__noempty' || x == '!0')
+		const enumsName = _body.find(x => x && (x.indexOf('__name') == 0 || x.indexOf('#') == 0))
 		if (enumsName)
-			name = (enumsName.match(/:(.*?)$/)||[])[1] || ''
+			name = /^#/.test(enumsName) ? enumsName.replace('#','') : (enumsName.match(/:(.*?)$/)||[])[1] || ''
 		bodyString = indent + enums.sort((a,b) => a<b?-1:1).join(`\n${indent}`) + '\n'
 		type = 'enum'
 	} else { // TYPE OR INPUT
@@ -91,12 +91,15 @@ const _compileBody = (body, options) => {
 			const field = fields[i]
 			const fieldBody = _body[field]
 			const t = Array.isArray(fieldBody) ? 'array' : typeof(fieldBody)
-			if (field.indexOf('__') == 0) {
-				if (field == '__name')
+			const isRequired = field == '__required' || field == '!'
+			const isNoEmpty = field == '__noempty' || field == '!0'
+			const isAlias = field == '__name' || field.indexOf('#') == 0
+			if (field.indexOf('__') == 0 || isRequired || isNoEmpty || isAlias) {
+				if (isAlias)
 					name = fieldBody
-				else if (field == '__required')
+				else if (isRequired)
 					required = fieldBody
-				else if (field == '__noempty')
+				else if (isNoEmpty)
 					noempty = fieldBody
 			} else if (!fieldBody)
 				bodyString += `${indent}${field}\n`
