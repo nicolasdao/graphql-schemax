@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.0.13](https://github.com/nicolasdao/graphql-schemax/compare/v0.0.12...v0.0.13) (2021-11-23)
+
+
+### Features
+
+* Add support for aliases ([fd6fcdf](https://github.com/nicolasdao/graphql-schemax/commit/fd6fcdf976d6f2cf3ec86d881a4b6e9f50fa680a))
+
 ### [0.0.12](https://github.com/nicolasdao/graphql-schemax/compare/v0.0.11...v0.0.12) (2021-11-13)
 
 ### [0.0.11](https://github.com/nicolasdao/graphql-schemax/compare/v0.0.10...v0.0.11) (2021-11-13)
