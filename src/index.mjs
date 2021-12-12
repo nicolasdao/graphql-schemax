@@ -1,4 +1,6 @@
+import { parse } from 'graphql'
 
+export const parseToAST = parse
 
 export function Schemax(...items) {
 	const _typeResolutions = []
@@ -71,9 +73,12 @@ const _compileBody = (body, options) => {
 	if (Array.isArray(_body)) {
 		const enums = _body.filter(x => x && x != '__required' && x != '!' && x != '__noempty' && x != '!0' && x.indexOf('__name') != 0 && x.indexOf('#') != 0)
 		if (!enums.length) 
-			throw new Error('Invalid \'body\'. Array cannot be empty.')
+			throw new Error('Invalid enum. Array cannot be empty.')
 		if (enums.some(x => typeof(x) != 'string'))
-			throw new Error('Invalid \'body\' item. When \'body\' is an array, all items must be strings.')
+			throw new Error('Invalid enum item. When \'body\' is an array, all items must be strings.')
+		const invalidEnum = enums.find(e => /[^a-zA-Z0-9_]/.test(e) || /^[0-9]/.test(e))
+		if (invalidEnum)
+			throw new Error(`Invalid enum '${invalidEnum}'. Enums can only have letters, numbers, or underscores, and the first character can't be a number.`)
 		required = _body.some(x => x == '__required' || x == '!')
 		noempty = _body.some(x => x == '__noempty' || x == '!0')
 		const enumsName = _body.find(x => x && (x.indexOf('__name') == 0 || x.indexOf('#') == 0))
@@ -340,6 +345,9 @@ const _transpileSchema = (items, typeResolutions) => {
 
 		schema += '}'
 	}	
+
+	// Validate the GraphQL schema
+	parse(schema)
 
 	return schema
 }

@@ -1410,6 +1410,61 @@ describe('Schemax', () => {
 			// console.log(new Schemax(schema).toString())
 			assert.equal(compressString(new Schemax(schema).toString()), expected)
 		})
+		it('17 - Should fail when invalid enums are defined', () => {
+			const schema = [
+				'type Mutation', {
+					invite: { 
+						users:[{ 
+							id:'ID', 
+							email:'String', 
+							roles:[['admin!','writer','reader','__required','__noempty','__name:RoleEnum']],
+							__required:true, 
+							__noempty:true, 
+							__name:'UserInviteInput' 
+						}],
+						':':{ message:'String', __name:'Message' } }
+				}
+			]
+
+			let error
+			try {
+				const data = new Schemax(schema).toString()
+				if (data)
+					error = null	
+			} catch(err) {
+				error = err 
+			}
+
+			assert.isOk(error)
+			assert.equal(error.message, 'Invalid enum \'admin!\'. Enums can only have letters, numbers, or underscores, and the first character can\'t be a number.')
+
+			const schema2 = [
+				'type Mutation', {
+					invite: { 
+						users:[{ 
+							id:'ID', 
+							email:'String', 
+							roles:[['admin','writer:hello','reader','__required','__noempty','__name:RoleEnum']],
+							__required:true, 
+							__noempty:true, 
+							__name:'UserInviteInput' 
+						}],
+						':':{ message:'String', __name:'Message' } }
+				}
+			]
+
+			let error2
+			try {
+				const data = new Schemax(schema2).toString()
+				if (data)
+					error2 = null	
+			} catch(err) {
+				error2 = err 
+			}
+
+			assert.isOk(error2)
+			assert.equal(error2.message, 'Invalid enum \'writer:hello\'. Enums can only have letters, numbers, or underscores, and the first character can\'t be a number.')
+		})
 	})
 	describe('.add()', () => {
 		it('01 - Should merge multiple schemax into a single valid GraphQL schema.', () => {
