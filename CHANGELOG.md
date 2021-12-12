@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.0.14](https://github.com/nicolasdao/graphql-schemax/compare/v0.0.13...v0.0.14) (2021-12-12)
+
+
+### Features
+
+* Add support for validating the GraphQL schema string ([edcebeb](https://github.com/nicolasdao/graphql-schemax/commit/edcebeb2a6dd91e949aafd2fe2d545d82c183126))
+
 ### [0.0.13](https://github.com/nicolasdao/graphql-schemax/compare/v0.0.12...v0.0.13) (2021-11-23)
 
 
