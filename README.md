@@ -6,7 +6,7 @@ Creates GraphQL string schema from plain JSON objects. Managing GraphQL schemas 
 - Inspection: Easily traverse the schema tree.
 - Leaner: Define GraphQL types, enums and inputs on-the-fly (_anonymous types_) instead of having to define them explicitly. 
 
-This package works with both ES6 modules and CommonJS and contains no dependencies.
+This package works with both ES6 modules and CommonJS.
 
 ```
 npm i graphql-schemax
