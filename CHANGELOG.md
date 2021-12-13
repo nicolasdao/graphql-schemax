@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.1.0](https://github.com/nicolasdao/graphql-schemax/compare/v0.0.14...v0.1.0) (2021-12-13)
+
+
+### Features
+
+* Add support for ignoring GraphQL errors ([05b21e7](https://github.com/nicolasdao/graphql-schemax/commit/05b21e716a6e39dff215227ee4f1750e5dd72d81))
+
 ### [0.0.14](https://github.com/nicolasdao/graphql-schemax/compare/v0.0.13...v0.0.14) (2021-12-12)
 
 
