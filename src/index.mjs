@@ -1,10 +1,42 @@
 import { parse } from 'graphql'
+import { validateSDL } from 'graphql/validation/validate.mjs'
 
 export const parseToAST = parse
 
 export function Schemax(...items) {
 	const _typeResolutions = []
-	const _items = items.reduce((acc,item) => {
+	const _ignoreRules = []
+	
+	const addIgnoreRules = ignoreRules => {
+		if (!ignoreRules || !ignoreRules.length)
+			return 
+
+		_ignoreRules.push(...ignoreRules.reduce((acc,ignoreRule) => {
+			const t = typeof(ignoreRule)
+			if (t == 'string')
+				acc.push(errMsg => errMsg && errMsg.indexOf(ignoreRule) == 0)
+			else if (t == 'function')
+				acc.push(ignoreRule)
+			else if (ignoreRule instanceof RegExp)
+				acc.push(errMsg => errMsg && ignoreRule.test(errMsg))
+			
+			return acc
+		}, []))
+	}
+
+	this.addIgnoreRules = addIgnoreRules
+
+	let __items = items
+	if (items.length == 1 && typeof(items[0]) == 'object' && !Array.isArray(items[0]) && items[0].defs && Array.isArray(items[0].defs)) {
+		const { typeResolutions, ignoreRules, defs } = items[0]
+		if (typeResolutions && Array.isArray(typeResolutions))
+			_typeResolutions.push(...typeResolutions)
+		if (ignoreRules && Array.isArray(ignoreRules))
+			addIgnoreRules(ignoreRules)
+		__items = defs
+	}
+	
+	const _items = __items.reduce((acc,item) => {
 		if (Array.isArray(item) && item.some(x => typeof(x) != 'string'))
 			acc.push(...item)
 		else
@@ -13,7 +45,7 @@ export function Schemax(...items) {
 	},[])
 	
 	this.toString = () => {
-		return _transpileSchema(_items, _typeResolutions)
+		return _transpileSchema(_items, _typeResolutions, _ignoreRules)
 	}
 
 	this.add = (...args) => {
@@ -234,12 +266,14 @@ const _compileField = ({ field, fieldBody, nestedBodyType, indent, signature='' 
  * @param  {String|RegExp}		.def
  * @param  {Boolean}			.keepLongest
  * @param  {Boolean}			.keepShortest
+ * @param  {[Function]}		ignoreRules			Functions that catch the GraphQL error message and ignore them
  * 
- * @return {String}   graphQLSchema
+ * @return {String}			graphQLSchema
  */
-const _transpileSchema = (items, typeResolutions) => {
+const _transpileSchema = (items, typeResolutions, ignoreRules) => {
 	if (!items.length)
 		return ''
+	ignoreRules = ignoreRules || []
 
 	const typeResolutionsOn = typeResolutions && typeResolutions.length
 	const matchTypeResolutions = typeResolutionsOn 
@@ -347,7 +381,17 @@ const _transpileSchema = (items, typeResolutions) => {
 	}	
 
 	// Validate the GraphQL schema
-	parse(schema)
+	const graphqlErrors = validateSDL(parse(schema))
+	if (graphqlErrors && graphqlErrors.length) {
+		const errors = graphqlErrors.filter(e => !ignoreRules.some(f => f((e||{}).message)))
+		if (errors.length) {
+			const firstDescriptiveError = errors.find(e => e && e.message && e.locations && e.locations.length) || errors[0]
+			const detail = firstDescriptiveError.locations && firstDescriptiveError.locations.length && firstDescriptiveError.locations[0].line
+				? ` Line ${firstDescriptiveError.locations[0].line}, column ${firstDescriptiveError.locations[0].column}: "${(schema.split('\n')[firstDescriptiveError.locations[0].line-1]||'').replace(/^\s+/,'')}"`
+				: ''
+			throw new Error(`Invalid schema. ${firstDescriptiveError.message}${detail}`)
+		}
+	}
 
 	return schema
 }

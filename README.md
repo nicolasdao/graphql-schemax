@@ -104,8 +104,12 @@ schema {
 >	- [Directives](#directives)
 > * [APIs](#apis)
 >	- [`constructor`](#constructor)
+>		- [Inline schema definitions signature](#inline-schema-definitions-signature)
+>		- [Array schema definitions signature](#array-schema-definitions-signature)
+>		- [Single object signature](#single-object-signature)
 >	- [`toString`](#tostring)
 >	- [`add`](#add)
+>	- [`addIgnoreRules`](#addignorerules)
 >	- [`addTypeResolutions`](#addtyperesolutions)
 >		- [Renaming a type](#renaming-a-type)
 >		- [Merging types](#merging-types)
@@ -543,7 +547,13 @@ const schema = new Schemax(
 		}] }
 	}
 )
+
+schema.addIgnoreRules(['Unknown directive'])
+
+console.log(schema.toString())
 ```
+
+> NOTES: `schema.addIgnoreRules(['Unknown directive'])` is necessary to prevent the `Unknown directive` error to break the compilation. To know more about this topic, please refer to the [`addIgnoreRules`](#addignorerules) section.
 
 Which outputs:
 
@@ -579,9 +589,13 @@ Notice how the directive must be followed by `null`.
 # APIs
 ## `constructor`
 
-The `Schemax` class supports an undefined amount of arguments. It supports an inline schema definitions as well as arrays of inline schema definitions.
+The `Schemax` class supports multiple signatures:
+1. Undefined amount of arguments with support for
+	- [Inline schema definitions signature](#inline-schema-definitions-signature)
+	- [Array schema definitions signature](#array-schema-definitions-signature)
+2. [Single object to configure various options and the schema definition at the same time](#single-object-signature).
 
-__*Inline schema definitions*__
+### Inline schema definitions signature 
 
 ```js
 import { Schemax } from 'graphql-schemax'
@@ -630,7 +644,7 @@ const schema = new Schemax(...inlineSchema)
 console.log(schema.toString())
 ```
 
-__*Array schema definitions*__
+### Array schema definitions signature 
 
 ```js
 import { Schemax } from 'graphql-schemax'
@@ -756,6 +770,65 @@ schema {
 }
 ```
 
+### Single object signature 
+
+```js
+import { Schemax } from 'graphql-schemax'
+
+const schema = new Schemax({
+	ignoreRules:['Unknown directive'],
+	typeResolutions: [{
+		def: 'type User', 
+		to: 'type User @some_undefined_directive'
+	}],
+	defs:[
+		'type Project', {
+			id: 'ID',
+			name: 'String'
+		},
+		'type User', {
+			id: 'ID',
+			first_name: 'String',
+			last_name: 'String'
+		},
+		'type Query', {
+			projects: '[Project]',
+			users: '[User]'
+		}
+	]
+})
+
+console.log(schema.toString())
+```
+
+Which outputs:
+
+```js
+type Project {
+	id: ID
+	name: String
+}
+
+type Query {
+	projects: [Project]
+	users: [User]
+}
+
+type User @some_undefined_directive {
+	id: ID
+	first_name: String
+	last_name: String
+}
+
+schema {
+	query: Query
+}
+```
+
+> NOTES: To learn more about the `ignoreRules` and `typeResolutions`, please refer to the following sections:
+>	- [`addIgnoreRules`](#addignorerules)
+>	- [`addTypeResolutions`](#addtyperesolutions)
+
 ## `add`
 
 Mutates the `Schemax` instance by adding more schema definitions. It supports the same signature as the [`constructor`](#constructor).
@@ -847,6 +920,41 @@ schema {
 }
 ```
 
+## `addIgnoreRules`
+
+`graphql-schemax` validates the generated string schema to prevent GraphQL errors. Depending on your use case, you might need to ignore those errors (e.g., undefined directives throw an `Unknown directive` GraphQL error if directives are used but not defined. This happens with global directives such as `@aws_api_key` or `@aws_cognito_user_pools` in AWS AppSync). GraphQL errors can be ignore based on their message using the `addIgnoreRules` API as follow:
+
+```js
+import { Schemax } from 'graphql-schemax'
+
+const schema = new Schemax(
+	'type Project', {
+		id: 'ID',
+		name: 'String'
+	},
+	'type User @aws_api_key', {
+		id: 'ID',
+		first_name: 'String',
+		last_name: 'String'
+	},
+	'type Query', {
+		projects: '[Project]',
+		users: '[User]'
+	})
+
+schema.addIgnoreRules(['Unknown directive'])
+
+console.log(schema.toString())
+```
+
+Where `schema.addIgnoreRules(['Unknown directive'])` can be read as follow: _Ignore GraphQL errors whose message starts with 'Unknown directive'_.
+
+This example supports 2 variations:
+- `schema.addIgnoreRules([/^Unknown directive/])`: Use regular expression for more advanced string matching.
+- `schema.addIgnoreRules([(errMsg => /^Unknown directive/.test(errMsg))])`: Use customfunction for even more advanced string matching.
+
+The values of this API can also be defined in the [Single object signature](#single-object-signature) version of the [Schemax constructor](#constructor).
+
 ## `addTypeResolutions`
 
 Helps renaming or merging types by explicitly controlling how type names are resolved.
@@ -879,9 +987,15 @@ const schema = new Schemax(...inlineSchema01, ...inlineSchema02)
 schema.addTypeResolutions([{
 	def: 'type User', to: 'type User @aws_api_key'
 }])
+// Necessary to prevent the @aws_api_key directive to break the compilation.
+schema.addIgnoreRules(['Unknown directive'])
 
 console.log(schema.toString())
 ```
+
+> NOTES: `schema.addIgnoreRules(['Unknown directive'])` is necessary to prevent the `Unknown directive` error to break the compilation. To know more about this topic, please refer to the [`addIgnoreRules`](#addignorerules) section.
+
+The values of this API can also be defined in the [Single object signature](#single-object-signature) version of the [Schemax constructor](#constructor).
 
 ### Merging types
 #### Keeping the longest type
@@ -912,9 +1026,13 @@ const schema = new Schemax(...inlineSchema01, ...inlineSchema02)
 schema.addTypeResolutions([{
 	def: /^type Query(\s|$)/, keepLongest:true
 }])
+// Necessary to prevent the @aws_api_key directive to break the compilation.
+schema.addIgnoreRules(['Unknown directive'])
 
 console.log(schema.toString())
 ```
+
+> NOTES: `schema.addIgnoreRules(['Unknown directive'])` is necessary to prevent the `Unknown directive` error to break the compilation. To know more about this topic, please refer to the [`addIgnoreRules`](#addignorerules) section.
 
 Which returns:
 
@@ -968,9 +1086,13 @@ const schema = new Schemax(...inlineSchema01, ...inlineSchema02)
 schema.addTypeResolutions([{
 	def: /^type Query(\s|$)/, keepShortest:true
 }])
+// Necessary to prevent the @aws_api_key directive to break the compilation.
+schema.addIgnoreRules(['Unknown directive'])
 
 console.log(schema.toString())
 ```
+
+> NOTES: `schema.addIgnoreRules(['Unknown directive'])` is necessary to prevent the `Unknown directive` error to break the compilation. To know more about this topic, please refer to the [`addIgnoreRules`](#addignorerules) section.
 
 Which returns:
 
@@ -1034,9 +1156,13 @@ schema.addTypeResolutions([{
 		return attrs.length ? `type Query ${attrs.join(' ')}` : 'type Query'
 	}
 }])
+// Necessary to prevent the @aws_api_key directive to break the compilation.
+schema.addIgnoreRules(['Unknown directive'])
 
 console.log(schema.toString())
 ```
+
+> NOTES: `schema.addIgnoreRules(['Unknown directive'])` is necessary to prevent the `Unknown directive` error to break the compilation. To know more about this topic, please refer to the [`addIgnoreRules`](#addignorerules) section.
 
 Which returns:
 
