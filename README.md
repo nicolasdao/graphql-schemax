@@ -360,7 +360,7 @@ const schema = new Schemax(
 		id:'ID!',
 		name: 'String!',
 		type: ['tall', 'short'],
-		devices: [{ id:'ID', name: 'String'}]
+		devices: { ':': [{ id:'ID', name: 'String'}] }
 	}
 )
 ```
@@ -412,7 +412,7 @@ const schema = new Schemax(
 	'type Tower', {
 		id:'ID!',
 		name: 'String!',
-		devices: [{ id:'ID', name:'String' }]
+		devices: { ':': [{ id:'ID', name:'String' }] }
 	}
 )
 ```
