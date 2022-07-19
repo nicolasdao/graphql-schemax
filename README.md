@@ -94,6 +94,8 @@ schema {
 
 > * [Getting started](#getting-started)
 >	- [Quick overview](#quick-overview)
+>	- [Using the same object as a type or input](#using-the-same-object-as-a-type-or-input)
+>	- [Careful - Enums vs Arrays](#careful---enums-vs-arrays)
 >	- [Required anonymous types](#required-anonymous-types)
 >		- [Required anonymous Type and Input](#required-anonymous-type-and-input)
 >		- [Required anonymous Enum](#required-anonymous-enum)
@@ -310,6 +312,110 @@ schema {
 ```
 
 Notice that `enum` definitions use arrays instead of objects.
+
+## Using the same object as a type or input
+
+The sample below shows how to use the `coord` object as a GraphQL type (used in the `Tower` type) and a GraphQL input (used in the `towers` field).
+
+```js
+const coord = {
+	lat:'Float', 
+	long:'Float' 
+}
+
+const schema = new Schemax(
+	'type Tower', {
+		id:'ID!',
+		name: 'String!',
+		coord: { ':': coord }
+	},
+	'type Query @aws_cognito_user_pools', {
+		towers: { 
+			where: { id:'ID', coord:coord }, 
+			':': '[Tower]'
+		}
+	}
+)
+```
+
+## Careful - Enums vs Arrays
+
+Defining GraphQL enums is done via string arrays:
+
+```js
+const schema = new Schemax(
+	'type Tower', {
+		id:'ID!',
+		name: 'String!',
+		type: ['tall', 'short']
+	}
+)
+```
+
+Defining GraphQL array types is done via object arrays:
+
+```js
+const schema = new Schemax(
+	'type Tower', {
+		id:'ID!',
+		name: 'String!',
+		type: ['tall', 'short'],
+		devices: [{ id:'ID', name: 'String'}]
+	}
+)
+```
+
+#### Common mistake: Creating an enum instead of an array type
+
+Let's assume there is an explicit `Device` type, and that a `Tower` typ needs to define a `devices` field as an array of `Device`. The following is __*incorrect*__:
+
+```js
+const schema = new Schemax(
+	'type Device', {
+		id: 'ID',
+		name: 'String'
+	},
+	'type Tower', {
+		id:'ID!',
+		name: 'String!',
+		devices: ['Device']
+	}
+)
+```
+
+In this example, the `Tower.devices` field is a GraphQL enum with one possible value called `Device`.
+
+The __*correct*__ definition is:
+
+```js
+const schema = new Schemax(
+	'type Device', {
+		id: 'ID',
+		name: 'String'
+	},
+	'type Tower', {
+		id:'ID!',
+		name: 'String!',
+		devices: '[Device]'
+	}
+)
+```
+
+or, alternatively:
+
+```js
+const schema = new Schemax(
+	'type Device', {
+		id: 'ID',
+		name: 'String'
+	},
+	'type Tower', {
+		id:'ID!',
+		name: 'String!',
+		devices: [{ id:'ID', name:'String' }]
+	}
+)
+```
 
 ## Required anonymous types
 ### Required anonymous Type and Input 
