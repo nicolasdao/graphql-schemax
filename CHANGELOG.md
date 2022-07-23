@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.4](https://github.com/nicolasdao/graphql-schemax/compare/v0.1.3...v0.1.4) (2022-07-23)
+
+
+### Bug Fixes
+
+* Multiple identical directive is not supported ([d727732](https://github.com/nicolasdao/graphql-schemax/commit/d7277326ab83eb6bcb88aad1303b5d41721391e2))
+
 ### [0.1.3](https://github.com/nicolasdao/graphql-schemax/compare/v0.1.2...v0.1.3) (2022-07-19)
 
 ### [0.1.2](https://github.com/nicolasdao/graphql-schemax/compare/v0.1.1...v0.1.2) (2022-07-19)
