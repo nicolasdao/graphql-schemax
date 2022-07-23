@@ -104,6 +104,8 @@ schema {
 >		- [Naming anonymous Type and Input](#naming-anonymous-type-and-input)
 >		- [Naming anonymous Enum](#naming-anonymous-enum)
 >	- [Directives](#directives)
+>		- [Basic directive](#basic-directive)
+>		- [Multiple identical directives](#multiple-identical-directives)
 > * [APIs](#apis)
 >	- [`constructor`](#constructor)
 >		- [Inline schema definitions signature](#inline-schema-definitions-signature)
@@ -636,6 +638,7 @@ schema {
 ```
 
 ## Directives
+### Basic directive
 
 ```js
 const schema = new Schemax(
@@ -659,7 +662,9 @@ schema.addIgnoreRules(['Unknown directive'])
 console.log(schema.toString())
 ```
 
-> NOTES: `schema.addIgnoreRules(['Unknown directive'])` is necessary to prevent the `Unknown directive` error to break the compilation. To know more about this topic, please refer to the [`addIgnoreRules`](#addignorerules) section.
+> NOTES: 
+>	- `schema.addIgnoreRules(['Unknown directive'])` is necessary to prevent the `Unknown directive` error to break the compilation. To know more about this topic, please refer to the [`addIgnoreRules`](#addignorerules) section.
+>	- Adding the same `email` directive on the `first_name` would fail as a JSON object cannot define multiple identical keys. To overcome this limitation please refer to the [Multiple identical directives](#multiple-identical-directives) section.
 
 Which outputs:
 
@@ -691,6 +696,32 @@ schema {
 ```
 
 Notice how the directive must be followed by `null`.
+
+## Multiple identical directives
+
+In the example above, only one field (`email`) is using the `@aws_api_key @aws_cognito_user_pools(cognito_groups: ["Bloggers", "Readers"])` directive. Adding that directive on the `first_name` would fail as a JSON object cannot define multiple identical keys. To overcome this limitation, prefix the directive with its field:
+```js
+const schema = new Schemax(
+	`directive @deprecated(
+		reason: String = "No longer supported"
+	) on FIELD_DEFINITION | ENUM_VALUE`, null,
+	'type Query @aws_cognito_user_pools', {
+		users: { where: { id:'ID', first_name:'String', __required:true, __name: 'WhereUserInput' }, ':': [{
+			id:'ID @aws_auth',
+			'first_name:@aws_api_key @aws_cognito_user_pools(cognito_groups: ["Bloggers", "Readers"])': null,
+			first_name:'String',
+			last_name:'String',
+			'email:@aws_api_key @aws_cognito_user_pools(cognito_groups: ["Bloggers", "Readers"])': null,
+			email:'String',
+			__name: 'User'
+		}] }
+	}
+)
+
+schema.addIgnoreRules(['Unknown directive'])
+
+console.log(schema.toString())
+```
 
 # APIs
 ## `constructor`

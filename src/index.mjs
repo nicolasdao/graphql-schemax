@@ -1,3 +1,16 @@
+/**
+ * Copyright (c) 2019-2021, Cloudless Consulting Pty Ltd.
+ * All rights reserved.
+ * 
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree.
+*/
+
+/**
+ * ABOUT THIS CODE:
+ * 	- Where are the fields parsed? In the "_compileBody" function
+*/
+
 import { parse } from 'graphql'
 import { validateSDL } from 'graphql/validation/validate.mjs'
 
@@ -131,6 +144,7 @@ const _compileBody = (body, options) => {
 			const isRequired = field == '__required' || field == '!'
 			const isNoEmpty = field == '__noempty' || field == '!0'
 			const isAlias = field == '__name' || field.indexOf('#') == 0
+			const isPlainText = !fieldBody // Plain text is an GraphQL annotation that should paste as is (e.g, directives).
 			if (field.indexOf('__') == 0 || isRequired || isNoEmpty || isAlias) {
 				if (isAlias)
 					name = fieldBody
@@ -138,9 +152,16 @@ const _compileBody = (body, options) => {
 					required = fieldBody
 				else if (isNoEmpty)
 					noempty = fieldBody
-			} else if (!fieldBody)
-				bodyString += `${indent}${field}\n`
-			else if (t == 'string')
+			} else if (isPlainText) { // most likely directive
+				const prefixDir = ((field.match(/^[a-zA-Z-_0-9]+:/g)||[])[0]||'').replace(':','')
+				// If there is a directive prefixed with the next field (e.g., 'email:@aws_api_key'), then remove that prefix.
+				// The prefix is used to support multiple occurence of the same directive in an object.
+				const _field = prefixDir && prefixDir == fields[i+1]
+					? field.replace(`${prefixDir}:`,'')
+					: field
+				
+				bodyString += `${indent}${_field}\n`
+			} else if (t == 'string')
 				bodyString += `${indent}${field}: ${fieldBody}\n`
 			else if (t == 'object') { // Example: { where:{ id:'ID', name:'String' }, ':': '[Product]' } -> products(where: 'I_3123213213'): [Product]
 				if (nestedBody) {
